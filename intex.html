@@ -1,1 +1,359 @@
+/**
+ * WARD BULLETIN GENERATOR — Google Apps Script
+ * ---------------------------------------------
+ * Bound to the "Sacrament Meeting 2026" spreadsheet. Reads whichever
+ * sheet tab is currently active (e.g. "August 30, 2026") and renders it
+ * into Template.html (a copy of ward-bulletin-template.html rewritten to
+ * use Apps Script scriptlets, <?= ... ?>, instead of [Bracket] tokens).
+ *
+ * SETUP (one-time)
+ * 1. In the spreadsheet: Extensions > Apps Script.
+ * 2. Delete the default empty Code.gs content and paste this file in.
+ * 3. Add a second file (HTML type) named exactly "Template", and paste
+ *    Template.html's content into it.
+ * 4. Deploy > New deployment > select type "Web app".
+ *    - Execute as: Me
+ *    - Who has access: Anyone with the link (or "Anyone in [org]" if you
+ *      want it restricted to BYU/ward accounts)
+ *    - Click Deploy, authorize the requested permissions.
+ * 5. Reload the spreadsheet. A "Ward Bulletin" menu appears — use
+ *    "Get Bulletin Link" to see/copy the live URL any time.
+ * 6. Whenever you redeploy (Deploy > Manage deployments > edit > New
+ *    version) after editing this code, the same URL keeps working.
+ *
+ * HOW IT FINDS DATA
+ * Rather than hardcoded cell references (which would break as rows get
+ * added/removed for stake business, releases, etc.), this scans column A
+ * of the active sheet for known labels ("Presiding:", "Opening Hymn", ...)
+ * and reads the value from column B of that same row. That matches how
+ * the "Conducting Program" sheet is laid out today. If you rename a
+ * label in the sheet, update the matching string in FIELD LABELS below.
+ *
+ * KNOWN LIMITATIONS (see the message in chat for more detail)
+ * - "Speaker" appears twice in the sheet (before and after the
+ *   Intermediate Hymn) — this assumes that order and always maps the
+ *   first "Speaker" row to Speaker 2 (after the Youth Speaker) and the
+ *   second to Speaker 3 (before the Closing Hymn).
+ * - getActiveSheet() reflects whichever tab an editor last had open in
+ *   this spreadsheet, not a per-visitor selection — see the note in the
+ *   chat reply about what that means with multiple weekly tabs.
+ *
+ * PUBLISHING TO GITHUB PAGES (one-time setup)
+ * 1. Create a public GitHub repo (e.g. "ward-bulletin"), and in its
+ *    Settings > Pages, set Source to "Deploy from a branch" / main / root.
+ *    That serves https://<your-username>.github.io/<repo-name>/.
+ * 2. GitHub > Settings > Developer settings > Personal access tokens >
+ *    Fine-grained tokens > Generate new token. Repository access: only
+ *    this repo. Permissions: Contents = Read and write. Copy the token
+ *    (shown once).
+ * 3. Edit GITHUB_OWNER / GITHUB_REPO / GITHUB_BRANCH / GITHUB_FILE_PATH
+ *    below to match your repo.
+ * 4. Reload the spreadsheet, use "Ward Bulletin > Set GitHub Token…" and
+ *    paste the token in. It's stored in this script's Properties, not in
+ *    the visible code, so it stays out of anything you share or copy.
+ * 5. "Ward Bulletin > Publish Bulletin" now renders whichever sheet tab
+ *    is active and commits it as index.html in that repo. GitHub Pages
+ *    usually picks up the change within a few seconds to a minute.
+ */
+
+var WARD_NAME = 'Edgemont 21st Ward'; // shown in the header bar and page title
+
+// GitHub Pages destination — edit these three to match your repo.
+var GITHUB_OWNER = 'your-github-username';
+var GITHUB_REPO = 'ward-bulletin';
+var GITHUB_BRANCH = 'main';
+var GITHUB_FILE_PATH = 'index.html';
+
+/** Serves the rendered bulletin at the web app's URL. */
+function doGet(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var data = buildBulletinData(sheet);
+  data.wardName = WARD_NAME;
+
+  var tmpl = HtmlService.createTemplateFromFile('Template');
+  tmpl.data = data;
+  return tmpl.evaluate()
+    .setTitle(WARD_NAME + ' Bulletin')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+
+/** Adds the "Ward Bulletin" menu when the spreadsheet is opened. */
+function onOpen() {
+  SpreadsheetApp.getUi()
+    .createMenu('Ward Bulletin')
+    .addItem('Publish Bulletin', 'publishBulletin')
+    .addItem('Preview (temporary link)', 'showBulletinUrl')
+    .addSeparator()
+    .addItem('Set GitHub Token…', 'promptForGithubToken')
+    .addToUi();
+}
+
+/**
+ * Menu action: renders the active sheet tab and commits it to GitHub
+ * Pages as GITHUB_FILE_PATH.
+ */
+function publishBulletin() {
+  var ui = SpreadsheetApp.getUi();
+  var token = PropertiesService.getScriptProperties().getProperty('GITHUB_TOKEN');
+  if (!token) {
+    ui.alert('No GitHub token set yet. Use "Ward Bulletin > Set GitHub Token…" first.');
+    return;
+  }
+
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var html = renderBulletinHtml_(sheet);
+
+  try {
+    publishToGithub_(html, token);
+    var pagesUrl = 'https://' + GITHUB_OWNER + '.github.io/' + GITHUB_REPO + '/';
+    ui.alert(
+      'Published!',
+      'This week\'s bulletin ("' + sheet.getName() + '") is live at:\n' + pagesUrl +
+      '\n\nGitHub Pages can take anywhere from a few seconds to a minute to pick up the change.',
+      ui.ButtonSet.OK
+    );
+  } catch (err) {
+    ui.alert('Publish failed', String(err), ui.ButtonSet.OK);
+  }
+}
+
+/** Menu action: prompts for and stores a GitHub token in Script Properties. */
+function promptForGithubToken() {
+  var ui = SpreadsheetApp.getUi();
+  var resp = ui.prompt(
+    'GitHub Personal Access Token',
+    'Paste a fine-grained token scoped to just the "' + GITHUB_REPO +
+      '" repo, with Contents: Read and write permission.',
+    ui.ButtonSet.OK_CANCEL
+  );
+  if (resp.getSelectedButton() !== ui.Button.OK) return;
+
+  var token = resp.getResponseText().trim();
+  if (!token) return;
+
+  PropertiesService.getScriptProperties().setProperty('GITHUB_TOKEN', token);
+  ui.alert('Saved. The token lives in this script\'s Properties, not in the visible code.');
+}
+
+/** Menu action: shows the deployed web app URL in a small dialog (handy for a quick look). */
+function showBulletinUrl() {
+  var url = ScriptApp.getService().getUrl();
+  var html;
+  if (url) {
+    html = HtmlService.createHtmlOutput(
+      '<div style="font-family:Arial,sans-serif;font-size:13px;line-height:1.5;">' +
+      '<p>This link always reflects whichever sheet tab is currently active:</p>' +
+      '<p><a href="' + url + '" target="_blank">' + url + '</a></p>' +
+      '<p style="color:#666;">This is separate from GitHub Pages — handy for previewing before you Publish.</p>' +
+      '</div>'
+    ).setWidth(420).setHeight(170);
+  } else {
+    html = HtmlService.createHtmlOutput(
+      '<div style="font-family:Arial,sans-serif;font-size:13px;line-height:1.5;">' +
+      '<p>This project hasn\'t been deployed as a web app yet.</p>' +
+      '<p>In the Apps Script editor: <b>Deploy &rarr; New deployment</b>, type ' +
+      '<b>Web app</b>, execute as <b>Me</b>, access <b>Anyone with the link</b>, ' +
+      'then <b>Deploy</b>.</p>' +
+      '</div>'
+    ).setWidth(420).setHeight(180);
+  }
+  SpreadsheetApp.getUi().showModalDialog(html, 'Ward Bulletin');
+}
+
+/* ---------------------------------------------------------------------
+ * GITHUB PAGES PUBLISHING
+ * ------------------------------------------------------------------ */
+
+/** Renders the given sheet tab to a raw HTML string (no web app wrapper). */
+function renderBulletinHtml_(sheet) {
+  var data = buildBulletinData(sheet);
+  data.wardName = WARD_NAME;
+  var tmpl = HtmlService.createTemplateFromFile('Template');
+  tmpl.data = data;
+  return tmpl.evaluate().getContent();
+}
+
+/**
+ * Creates or updates GITHUB_FILE_PATH in the GitHub repo via the
+ * Contents API: https://docs.github.com/en/rest/repos/contents
+ */
+function publishToGithub_(html, token) {
+  var apiUrl = 'https://api.github.com/repos/' + GITHUB_OWNER + '/' + GITHUB_REPO +
+    '/contents/' + GITHUB_FILE_PATH;
+
+  // An existing file must be updated with its current sha; a new file omits it.
+  var sha = null;
+  var getResp = UrlFetchApp.fetch(apiUrl + '?ref=' + GITHUB_BRANCH, {
+    method: 'get',
+    headers: githubHeaders_(token),
+    muteHttpExceptions: true
+  });
+  if (getResp.getResponseCode() === 200) {
+    sha = JSON.parse(getResp.getContentText()).sha;
+  }
+
+  var payload = {
+    message: 'Update bulletin (' + new Date().toISOString() + ')',
+    content: Utilities.base64Encode(html, Utilities.Charset.UTF_8),
+    branch: GITHUB_BRANCH
+  };
+  if (sha) payload.sha = sha;
+
+  var putResp = UrlFetchApp.fetch(apiUrl, {
+    method: 'put',
+    headers: githubHeaders_(token),
+    contentType: 'application/json',
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  });
+
+  var code = putResp.getResponseCode();
+  if (code !== 200 && code !== 201) {
+    throw new Error('GitHub API error ' + code + ': ' + putResp.getContentText());
+  }
+}
+
+function githubHeaders_(token) {
+  return {
+    'Authorization': 'Bearer ' + token,
+    'Accept': 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28'
+  };
+}
+
+/* ---------------------------------------------------------------------
+ * DATA EXTRACTION
+ * ------------------------------------------------------------------ */
+
+/** Reads the active sheet's column A/B labels into a bulletin data object. */
+function buildBulletinData(sheet) {
+  var data = sheet.getDataRange().getValues();
+  var tz = sheet.getParent().getSpreadsheetTimeZone();
+
+  var opening = parseHymn_(findFirst_(data, 'Opening Hymn'));
+  var sacrament = parseHymn_(findFirst_(data, 'Sacrament Hymn'));
+  var intermediate = parseHymn_(findFirst_(data, 'Intermediate Hymn'));
+  var closing = parseHymn_(findFirst_(data, 'Closing Hymn'));
+  var speakers = findValues_(data, 'Speaker'); // [after Youth Speaker, before Closing Hymn]
+
+  var announcementLines = getAnnouncements_(data);
+  var announcementsHtml = announcementLines.map(function (line) {
+    return linkify_(escapeHtml_(line));
+  });
+
+  return {
+    date: formatDateValue_(findFirst_(data, 'Date'), tz),
+    presiding: escapeHtml_(findFirst_(data, 'Presiding')),
+    conducting: escapeHtml_(findFirst_(data, 'Conducting')),
+    musicDirector: escapeHtml_(findFirst_(data, 'Recognize Music Director')),
+    organist: escapeHtml_(findFirst_(data, 'Recognize Organist')),
+
+    openingHymnNum: escapeHtml_(opening.num),
+    openingHymnTitle: escapeHtml_(opening.title),
+    openingPrayer: escapeHtml_(findFirst_(data, 'Invocation')),
+
+    sacramentHymnNum: escapeHtml_(sacrament.num),
+    sacramentHymnTitle: escapeHtml_(sacrament.title),
+
+    youthSpeaker: escapeHtml_(findFirst_(data, 'Youth Speaker')),
+    speaker2: escapeHtml_(speakers[0] || ''),
+
+    hymnNum: escapeHtml_(intermediate.num),
+    hymnTitle: escapeHtml_(intermediate.title),
+
+    speaker3: escapeHtml_(speakers[1] || ''),
+
+    closingHymnNum: escapeHtml_(closing.num),
+    closingHymnTitle: escapeHtml_(closing.title),
+    closingPrayer: escapeHtml_(findFirst_(data, 'Benediction')),
+
+    announcementsHtml: announcementsHtml
+  };
+}
+
+/** Normalizes a label for comparison: trims, drops a trailing colon, lowercases. */
+function normalizeLabel_(s) {
+  return String(s == null ? '' : s).trim().replace(/:$/, '').toLowerCase();
+}
+
+/** Returns every column-B value whose column-A cell matches `label`, in row order. */
+function findValues_(data, label) {
+  var norm = normalizeLabel_(label);
+  var out = [];
+  for (var i = 0; i < data.length; i++) {
+    if (normalizeLabel_(data[i][0]) === norm) {
+      out.push(data[i][1]);
+    }
+  }
+  return out;
+}
+
+/** Returns the first column-B value matching `label`, or '' if none found. */
+function findFirst_(data, label) {
+  var vals = findValues_(data, label);
+  return vals.length ? vals[0] : '';
+}
+
+/** Splits "#97 - Lead, Kindly Light" into {num: "97", title: "Lead, Kindly Light"}. */
+function parseHymn_(raw) {
+  var str = String(raw == null ? '' : raw).trim();
+  var m = str.match(/^#?\s*(\d+)\s*[-–—]\s*(.+)$/);
+  if (m) return { num: m[1], title: m[2].trim() };
+  return { num: '', title: str };
+}
+
+/** Formats a Date object or date-like string as "August 30, 2026". */
+function formatDateValue_(raw, timeZone) {
+  if (Object.prototype.toString.call(raw) === '[object Date]' && !isNaN(raw.getTime())) {
+    return Utilities.formatDate(raw, timeZone, 'MMMM d, yyyy');
+  }
+  var s = String(raw == null ? '' : raw).trim();
+  var d = new Date(s);
+  if (s && !isNaN(d.getTime())) {
+    return Utilities.formatDate(d, timeZone, 'MMMM d, yyyy');
+  }
+  return s;
+}
+
+/**
+ * Collects the announcement lines: every non-empty column-A cell right
+ * after the row whose column A reads "ANNOUNCEMENTS", stopping at the
+ * first blank row.
+ */
+function getAnnouncements_(data) {
+  var startIdx = -1;
+  for (var i = 0; i < data.length; i++) {
+    if (normalizeLabel_(data[i][0]) === 'announcements') {
+      startIdx = i;
+      break;
+    }
+  }
+  if (startIdx === -1) return [];
+
+  var items = [];
+  for (var r = startIdx + 1; r < data.length; r++) {
+    var cell = data[r][0];
+    if (cell === '' || cell === null || cell === undefined) break;
+    items.push(String(cell).trim());
+  }
+  return items;
+}
+
+/** Escapes HTML-sensitive characters so sheet text can't break the markup. */
+function escapeHtml_(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/** Turns bare URLs in already-escaped text into clickable links. */
+function linkify_(escapedStr) {
+  return escapedStr.replace(
+    /(https?:\/\/[^\s<]+)/g,
+    '<a href="$1" target="_blank" rel="noopener">$1</a>'
+  );
+}
 
