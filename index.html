@@ -3,14 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="minimum-scale=1, initial-scale=1, width=device-width">
-<title><?= data.wardName ?> Bulletin</title>
+<title>Edgemont 21st Ward Bulletin</title>
 <style>
-  /*
-    Same visual design as ward-bulletin-template.html, rewritten to use
-    Apps Script scriptlet tags instead of [Bracket] placeholders so
-    Code.gs's doGet() can render it directly from the spreadsheet.
-    See Code.gs for the dot-leader / grid explanation.
-  */
+   
 
   :root {
     --accent: #364fc7;
@@ -118,7 +113,7 @@
 </head>
 <body>
 <header class="app-header">
-  <h1><?= data.wardName ?></h1>
+  <h1>Edgemont 21st Ward</h1>
 </header>
 <div class="page">
   <div class="bulletin-body">
@@ -127,7 +122,7 @@
       <div class="align"><span>Sacrament Meeting</span></div>
     </div>
     <div class="bulletin-item entry bulletin-date">
-      <div class="align"><span><?= data.date ?></span></div>
+      <div class="align"><span>August 30, 2026</span></div>
     </div>
 
     <div class="bulletin-item entry bulletin-gap"></div>
@@ -135,34 +130,34 @@
     <div class="bulletin-item entry bulletin-name">
       <div class="line">
         <span class="left">Presiding</span>
-        <span class="right"><?= data.presiding ?></span>
+        <span class="right">Bishop Matt Smith</span>
       </div>
     </div>
     <div class="bulletin-item entry bulletin-name">
       <div class="line">
         <span class="left">Conducting</span>
-        <span class="right"><?= data.conducting ?></span>
+        <span class="right">Eric Allan</span>
       </div>
     </div>
     <div class="bulletin-item entry bulletin-name">
       <div class="line">
         <span class="left">Music Director</span>
-        <span class="right"><?= data.musicDirector ?></span>
+        <span class="right">Katie Young</span>
       </div>
     </div>
     <div class="bulletin-item entry bulletin-name">
       <div class="line">
         <span class="left">Organist</span>
-        <span class="right"><?= data.organist ?></span>
+        <span class="right">Mary Young</span>
       </div>
     </div>
 
     <div class="bulletin-item entry bulletin-hymn">
       <div class="line">
         <span class="left">Opening Hymn</span>
-        <span class="right"><?= data.openingHymnNum ?></span>
+        <span class="right">97</span>
       </div>
-      <div class="bulletin-hymn-title"><span><?= data.openingHymnTitle ?></span></div>
+      <div class="bulletin-hymn-title"><span>Lead, Kindly Light</span></div>
     </div>
 
     <div class="bulletin-item entry bulletin-gap"></div>
@@ -170,16 +165,16 @@
     <div class="bulletin-item entry bulletin-name">
       <div class="line">
         <span class="left">Opening Prayer</span>
-        <span class="right"><?= data.openingPrayer ?></span>
+        <span class="right">Melissa Jones</span>
       </div>
     </div>
 
     <div class="bulletin-item entry bulletin-hymn">
       <div class="line">
         <span class="left">Sacrament Hymn</span>
-        <span class="right"><?= data.sacramentHymnNum ?></span>
+        <span class="right">192</span>
       </div>
-      <div class="bulletin-hymn-title"><span><?= data.sacramentHymnTitle ?></span></div>
+      <div class="bulletin-hymn-title"><span>He Died! The Great Redeemer Died</span></div>
     </div>
 
     <div class="bulletin-item entry bulletin-gap"></div>
@@ -191,7 +186,7 @@
     <div class="bulletin-item entry bulletin-name">
       <div class="line">
         <span class="left">Youth Speaker</span>
-        <span class="right"><?= data.youthSpeaker ?></span>
+        <span class="right">Lucia Montie</span>
       </div>
     </div>
 
@@ -200,7 +195,7 @@
     <div class="bulletin-item entry bulletin-name">
       <div class="line">
         <span class="left">Speaker</span>
-        <span class="right"><?= data.speaker2 ?></span>
+        <span class="right">Finn Smith</span>
       </div>
     </div>
 
@@ -209,15 +204,15 @@
     <div class="bulletin-item entry bulletin-music">
       <div class="line">
         <span class="left">Hymn</span>
-        <span class="right"><?= data.hymnNum ?></span>
+        <span class="right">1001</span>
       </div>
-      <div class="bulletin-music-title"><span><?= data.hymnTitle ?></span></div>
+      <div class="bulletin-music-title"><span>Come Thou Fount</span></div>
     </div>
 
     <div class="bulletin-item entry bulletin-name">
       <div class="line">
         <span class="left">Speaker</span>
-        <span class="right"><?= data.speaker3 ?></span>
+        <span class="right">Michael Montie</span>
       </div>
     </div>
 
@@ -226,15 +221,15 @@
     <div class="bulletin-item entry bulletin-hymn">
       <div class="line">
         <span class="left">Closing Hymn</span>
-        <span class="right"><?= data.closingHymnNum ?></span>
+        <span class="right">292</span>
       </div>
-      <div class="bulletin-hymn-title"><span><?= data.closingHymnTitle ?></span></div>
+      <div class="bulletin-hymn-title"><span>O My Father</span></div>
     </div>
 
     <div class="bulletin-item entry bulletin-name">
       <div class="line">
         <span class="left">Closing Prayer</span>
-        <span class="right"><?= data.closingPrayer ?></span>
+        <span class="right">Shane Hodapp</span>
       </div>
     </div>
 
@@ -246,14 +241,8 @@
 
     <div class="bulletin-item entry bulletin-styledtext">
       <ul>
-        <? if (data.announcementsHtml.length === 0) { ?>
-        <li><p>No announcements for this week.</p></li>
-        <? } else {
-             for (var i = 0; i < data.announcementsHtml.length; i++) { ?>
-        <li><p><?!= data.announcementsHtml[i] ?></p></li>
-        <?   }
-           } ?>
-      </ul>
+                <li><p>Youth (including primary children turning 12 next year), their parents, and youth leaders will meet in the overflow; everyone else in the RS room</p></li>
+              </ul>
     </div>
 
   </div>
