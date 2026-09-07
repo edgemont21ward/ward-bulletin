@@ -45,7 +45,18 @@
   .bulletin-title .align { font-weight: bold; font-size: 20px; }
   .bulletin-date .align { font-style: italic; font-size: 20px; }
 
+   
+  .bulletin-subheading .align {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    font-style: italic;
+    font-size: 14px;
+    color: #666;
+  }
+
   .bulletin-gap { margin-top: 0em; }
+  .bulletin-gap.medium { margin-top: 1.25em; }
   .bulletin-gap.large { margin-top: 2.5em; }
 
   .line {
@@ -169,6 +180,16 @@
       </div>
     </div>
 
+        <div class="bulletin-item entry bulletin-gap"></div>
+    <div class="bulletin-item entry bulletin-subheading">
+      <div class="align"><span>Stake Business</span></div>
+    </div>
+    
+        <div class="bulletin-item entry bulletin-gap"></div>
+    <div class="bulletin-item entry bulletin-subheading">
+      <div class="align"><span>Ward Business</span></div>
+    </div>
+    
     <div class="bulletin-item entry bulletin-hymn">
       <div class="line">
         <span class="left">Sacrament Hymn</span>
@@ -177,11 +198,13 @@
       <div class="bulletin-hymn-title"><span>O God, the Eternal Father</span></div>
     </div>
 
-    <div class="bulletin-item entry bulletin-gap"></div>
+    <div class="bulletin-item entry bulletin-gap medium"></div>
 
     <div class="bulletin-item entry bulletin-title">
       <div class="align"><span>The Sacrament</span></div>
     </div>
+
+    <div class="bulletin-item entry bulletin-gap medium"></div>
 
         <div class="bulletin-item entry bulletin-music">
       <div class="line">
