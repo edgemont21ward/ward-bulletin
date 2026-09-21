@@ -19,18 +19,17 @@
  *
  * SETUP (one-time)
  * 1. In the spreadsheet: Extensions > Apps Script.
- * 2. Delete the default empty Code.gs. This project is split across
- *    several script files instead of one — 01_Config.gs (this file)
- *    through 07_BulletinTabs.gs. Add each one as its own file (+ > Script)
- *    named to match (Apps Script appends ".gs" itself, so name the file
- *    just "01_Config", "02_Menu", etc.) and paste in its contents. The
- *    numeric prefixes keep them in a sensible reading order in the
- *    editor's file list; see the note below on why 01_Config.gs
+ * 2. Project Settings > IDs: copy the Script ID into "scriptId" in the
+ *    repo's .clasp.json. Delete the default empty Code.gs.
+ * 3. Push the code in from the repo, rather than pasting it file by
+ *    file — commit to main and the "Push to Apps Script" workflow runs
+ *    clasp push, which creates all ten files (01_Config through
+ *    07_BulletinTabs, Template, Sidebar, and the appsscript.json
+ *    manifest) in one go. Setup for that, including the credentials it
+ *    needs, is in source/README.md under "Automatic deploys". The
+ *    numeric prefixes keep the script files in a sensible reading order
+ *    in the editor's file list; see the note below on why 01_Config.gs
  *    specifically has to load before the others.
- * 3. Add a file (HTML type) named exactly "Template", and paste
- *    Template.html's content into it. Add another (HTML type) named
- *    exactly "Sidebar", and paste Sidebar.html's content into it — that's
- *    what powers the "Show Toolbar" menu item's Publish/Preview buttons.
  * 4. Deploy > New deployment > select type "Web app".
  *    - Execute as: Me
  *    - Who has access: Anyone with the link (or "Anyone in [org]" if you
@@ -123,10 +122,11 @@
  * out of the file being replaced, not the day the publish happens (see
  * archiveExistingBulletin_ in 03_Publish.gs).
  *
- * A readable copy of this project's own code lives in the repo's
- * source/ folder, kept up to date by hand — nothing in the script
- * writes it. Editing a file there changes nothing on its own; the Apps
- * Script project is what actually runs. 
+ * This project's own code lives in the repo's source/ folder, and that
+ * copy is the one to edit: pushing a change there to main runs
+ * clasp push --force, which overwrites the editor with it. Edits made
+ * here in the editor are therefore temporary — copy anything worth
+ * keeping back into source/ and commit it. See source/README.md.
  */
 
 var WARD_NAME = 'Edgemont 21st Ward'; // shown in the header bar and page title
