@@ -1,0 +1,11 @@
+# GitHub Pages serves this repo with Jekyll, from main / root. Everything
+# at the root is published unless it's listed here, so this narrows the
+# site down to what people are actually meant to read: index.html (the
+# current bulletin) and archive/ (previous weeks).
+#
+# Files and directories whose names start with "." or "_" are already
+# skipped by Jekyll without being listed — that covers .clasp.json,
+# .claspignore, .github/, and this file.
+exclude:
+  - source      # the Apps Script project; read it in the repo, not on the site
+  - README.md   # repo documentation, not part of the bulletin
