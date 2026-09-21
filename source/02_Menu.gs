@@ -103,7 +103,6 @@ function buildMenu_() {
 
   menu
     .addSeparator()
-    .addItem('💾 Back up Source to GitHub', 'backupSourceToGithubFromMenu')
     .addItem('🔑 Set GitHub Token…', 'promptForGithubToken')
     .addToUi();
 }

@@ -1,43 +1,22 @@
-# Ward Bulletin Generator — source
+# Ward Bulletin — Edgemont 21st Ward
 
-The Google Apps Script behind the Edgemont 21st Ward sacrament meeting
-bulletin. This folder is the readable copy of the code; the script itself
-lives in the Apps Script project bound to the "Sacrament Meeting 2026"
-spreadsheet (Extensions > Apps Script), and `../index.html` is whatever it
-last published. Previous weeks land in `../archive/`, each named for the
-Sunday that bulletin was for.
+The weekly sacrament meeting bulletin, published to GitHub Pages.
 
-## Files
-
-| File | What's in it |
+| Path | What it is |
 | --- | --- |
-| `01_Config.gs` | Ward name, GitHub destinations, web app URL, sheet/tab names. Full setup instructions are in the comment at the top. |
-| `02_Menu.gs` | The "Ward Bulletin" menu, the on-open triggers, and the sidebar. |
-| `03_Publish.gs` | Serving the web app, publishing to GitHub Pages, and archiving the previous bulletin. |
-| `04_Preview.gs` | The Preview and Publish result dialogs. |
-| `05_BulletinData.gs` | Reads the sheet and turns it into the data the template renders. |
-| `06_Dropdowns.gs` | Type-ahead dropdowns for songs, speakers and leadership, plus the Date auto-fill. |
-| `07_BulletinTabs.gs` | Creating each week's tab, and showing/hiding the reference tabs. |
-| `08_SourceBackup.gs` | Commits this folder's contents back to GitHub from the editor. Optional; needs the one-time setup described in `01_Config.gs`. |
-| `Template.html` | The bulletin itself — layout and styling. |
-| `Sidebar.html` | The Publish/Preview sidebar. |
+| `index.html` | The current week's bulletin — what GitHub Pages serves. Overwritten by each publish. |
+| `archive/` | Previous weeks, one file per bulletin, named for the Sunday that bulletin was for (`2026-09-20.html`). Written automatically, just before `index.html` is overwritten. |
+| `source/` | The Google Apps Script that generates all of it. See `source/README.md`. |
 
-## Load order
+Nothing here is edited by hand except `source/`. The bulletin is produced
+from a Google Sheet ("Sacrament Meeting 2026") by the Apps Script in
+`source/`, and lands here when you use **Ward Bulletin > Publish** from the
+sheet's own menu. The script commits `index.html` directly through the
+GitHub API using a token stored in its Script Properties.
 
-Apps Script joins every file in the project into one script before running
-it, in the order the files are listed in the editor's sidebar — hence the
-number prefixes. Functions are hoisted, so any file can call any other
-file's functions regardless of order. The one thing that *is*
-order-sensitive is a top-level `var` that reads another top-level `var`, so
-all of those live together in `01_Config.gs`, which loads first.
+## Archive naming
 
-## Updating
-
-Editing a file here does nothing on its own — the Apps Script project is
-what actually runs. Paste changes into the matching file in the editor
-(the `.gs` extension is added by Apps Script, so the file there is named
-`01_Config`, not `01_Config.gs`), save, then reload the spreadsheet.
-
-Going the other way, "Ward Bulletin > Back up Source to GitHub" copies the
-editor's current files into this folder, committing only what actually
-changed.
+An archived file is named for the Sunday its bulletin was written for, not
+for the day it got archived — the date is read out of the bulletin being
+replaced. Publishing next week's bulletin on a Wednesday therefore files
+the outgoing one as its own Sunday, not as that Wednesday.

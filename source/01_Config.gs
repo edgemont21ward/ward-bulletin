@@ -123,39 +123,10 @@
  * out of the file being replaced, not the day the publish happens (see
  * archiveExistingBulletin_ in 03_Publish.gs).
  *
- * SOURCE BACKUP (optional, one-time setup)
- * "Ward Bulletin > Back up Source to GitHub" commits this project's own
- * code to GITHUB_SOURCE_DIR in the same repo, so the script is version-
- * controlled next to what it publishes. It reuses the GitHub token
- * that's already set — but reading a script's own files is something
- * Apps Script only permits through its REST API, so two things have to
- * be switched on first. Everything else in this project works fine
- * without them; only that one menu item needs them.
- * 1. Open script.google.com/home/usersettings and turn ON "Google Apps
- *    Script API". (This is a per-Google-account switch, not per-script.)
- * 2. In the Apps Script editor: Project Settings (gear icon) > check
- *    "Show appsscript.json manifest file in editor". Open the
- *    appsscript.json that appears and ADD the "oauthScopes" block below,
- *    keeping every key already in the file (timeZone, runtimeVersion,
- *    webapp, and so on — don't replace the file wholesale, or the web
- *    app deployment settings go with it):
- *
- *      "oauthScopes": [
- *        "https://www.googleapis.com/auth/spreadsheets",
- *        "https://www.googleapis.com/auth/script.container.ui",
- *        "https://www.googleapis.com/auth/script.external_request",
- *        "https://www.googleapis.com/auth/script.scriptapp",
- *        "https://www.googleapis.com/auth/script.projects.readonly"
- *      ]
- *
- *    Declaring scopes by hand replaces Apps Script's own guesses, so
- *    that list has to cover everything this project does, not just the
- *    new line — which is why the other four are there. If an action
- *    ever fails with an authorization error naming some other scope,
- *    add that one to the list too.
- * 3. Run "Back up Source to GitHub" once and approve the new permission
- *    prompt. It commits only the files that actually changed, so running
- *    it again right away reports nothing to do.
+ * A readable copy of this project's own code lives in the repo's
+ * source/ folder, kept up to date by hand — nothing in the script
+ * writes it. Editing a file there changes nothing on its own; the Apps
+ * Script project is what actually runs.
  */
 
 var WARD_NAME = 'Edgemont 21st Ward'; // shown in the header bar and page title
@@ -175,7 +146,6 @@ var GITHUB_FILE_PATH = 'index.html';
 
 
 var GITHUB_ARCHIVE_DIR = 'archive'; // where the previous index.html goes before each publish overwrites it
-var GITHUB_SOURCE_DIR = 'source'; // where "Back up Source to GitHub" commits this project's own code
 
 
 // The web app's deployed URL, for the "Preview" menu item. Apps Script's
