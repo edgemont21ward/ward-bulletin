@@ -1,0 +1,15 @@
+{
+  "scriptId": "1gQhAktg3Hh78sft8UV9S4goItNxcsUv9aZ0bNlpYqTZmcCjpJ7box0Q5",
+  "rootDir": "source",
+  "scriptExtensions": [".gs"],
+  "htmlExtensions": [".html"],
+  "filePushOrder": [
+    "source/01_Config.gs",
+    "source/02_Menu.gs",
+    "source/03_Publish.gs",
+    "source/04_Preview.gs",
+    "source/05_BulletinData.gs",
+    "source/06_Dropdowns.gs",
+    "source/07_BulletinTabs.gs"
+  ]
+}
