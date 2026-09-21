@@ -1,0 +1,68 @@
+# Pushes source/ into the Apps Script project bound to the
+# "Sacrament Meeting 2026" sheet, so committing here is what updates the
+# script — no pasting into the editor.
+#
+# Setup is in source/README.md under "Automatic deploys".
+
+name: Push to Apps Script
+
+# Only on pushes to main, never on pull_request. A public repo can receive
+# PRs from anyone, and a workflow that ran on those would hand a fork's code
+# the credential below.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'source/**'
+      - '.clasp.json'
+      - '.claspignore'
+      - '.github/workflows/push-to-apps-script.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apps-script-push
+  cancel-in-progress: true
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - run: npm install -g @google/clasp@3
+
+      - name: Write clasp credentials
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+        run: |
+          if [ -z "$CLASPRC_JSON" ]; then
+            echo "The CLASPRC_JSON secret is empty or missing — see source/README.md." >&2
+            exit 1
+          fi
+          printf '%s' "$CLASPRC_JSON" > "$HOME/.clasprc.json"
+          chmod 600 "$HOME/.clasprc.json"
+
+      - name: Check the manifest is present
+        run: |
+          if [ ! -f source/appsscript.json ]; then
+            echo "source/appsscript.json is missing. Copy it out of the Apps Script editor" >&2
+            echo "(Project Settings > 'Show appsscript.json manifest file') and commit it." >&2
+            exit 1
+          fi
+
+      # --force skips the interactive confirmation. This OVERWRITES whatever
+      # is currently in the Apps Script editor with what's in source/.
+      - name: Push to Apps Script
+        run: clasp push --force
+
+      # Updating code does not update the deployed web app. Uncomment and set
+      # the secret to your deployment ID if you ever want that.
+      # - name: Redeploy the web app
+      #   run: clasp update-deployment ${{ secrets.CLASP_DEPLOYMENT_ID }}
