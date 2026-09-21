@@ -127,7 +127,6 @@
  * source/ folder, kept up to date by hand — nothing in the script
  * writes it. Editing a file there changes nothing on its own; the Apps
  * Script project is what actually runs. 
- * My Test!!!!
  */
 
 var WARD_NAME = 'Edgemont 21st Ward'; // shown in the header bar and page title
