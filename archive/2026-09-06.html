@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="minimum-scale=1, initial-scale=1, width=device-width">
+<title>Edgemont 21st Ward Bulletin</title>
+<style>
+   
+
+  :root {
+    --accent: #364fc7;
+    --text: #1a1a1a;
+    --leader-string: " . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .";
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: #fff;
+    color: var(--text);
+  }
+
+  .page {
+    max-width: 1024px;
+    margin: 0 auto;
+    padding: 24px 16px 60px;
+  }
+
+  .bulletin-body {
+    font-family: Verdana, Arial, sans-serif;
+    font-size: 15px;
+    font-weight: 400;
+    line-height: 1.5;
+  }
+
+  .entry { width: 100%; padding: 1px 0; }
+
+  .bulletin-title .align,
+  .bulletin-date .align {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+  .bulletin-title .align { font-weight: bold; font-size: 20px; }
+  .bulletin-date .align { font-style: italic; font-size: 20px; }
+
+   
+  .bulletin-subheading .align {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    font-style: italic;
+    font-size: 14px;
+    color: #666;
+  }
+
+  .bulletin-gap { margin-top: 0em; }
+  .bulletin-gap.medium { margin-top: 1.25em; }
+  .bulletin-gap.large { margin-top: 2.5em; }
+
+  .line {
+    display: grid;
+    grid-template-columns: auto max-content;
+    grid-template-areas: "left right";
+    align-items: end;
+    gap: 0 0.25rem;
+  }
+  .line .left {
+    grid-area: left;
+    position: relative;
+    overflow: hidden;
+  }
+  .line .left::after {
+    content: var(--leader-string);
+    position: absolute;
+    padding-left: 0.25ch;
+    text-align: right;
+  }
+  .line .right { grid-area: right; }
+
+  .bulletin-hymn-title,
+  .bulletin-music-title {
+    text-align: center;
+    width: 100%;
+    font-style: italic;
+  }
+
+  .bulletin-styledtext ul { margin: 4px 0; padding-left: 22px; }
+  .bulletin-styledtext p { margin: 4px 0; }
+  .bulletin-styledtext a { color: var(--accent); }
+
+  .bulletin-article-heading,
+  .bulletin-styledtext-heading {
+    font-weight: 700;
+    text-decoration-line: underline;
+    margin-top: 4px;
+  }
+
+  .divider {
+    height: 2px;
+    background: var(--accent);
+    border: 0;
+    margin: 20px 0;
+  }
+
+  .app-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    background: var(--accent);
+    color: #fff;
+    opacity: 0.9;
+  }
+  .app-header h1 {
+    flex: 2 0 0;
+    margin: 0;
+    text-align: center;
+    font-size: 1.15rem;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+<header class="app-header">
+  <h1>Edgemont 21st Ward</h1>
+</header>
+<div class="page">
+  <div class="bulletin-body">
+
+    <div class="bulletin-item entry bulletin-title">
+      <div class="align"><span>Sacrament Meeting</span></div>
+    </div>
+    <div class="bulletin-item entry bulletin-date">
+      <div class="align"><span>September 6, 2026</span></div>
+    </div>
+
+    <div class="bulletin-item entry bulletin-gap"></div>
+
+    <div class="bulletin-item entry bulletin-name">
+      <div class="line">
+        <span class="left">Presiding</span>
+        <span class="right">Bishop Matt Smith</span>
+      </div>
+    </div>
+    <div class="bulletin-item entry bulletin-name">
+      <div class="line">
+        <span class="left">Conducting</span>
+        <span class="right">Kimball Germane</span>
+      </div>
+    </div>
+    <div class="bulletin-item entry bulletin-name">
+      <div class="line">
+        <span class="left">Music Director</span>
+        <span class="right">Katie Young</span>
+      </div>
+    </div>
+    <div class="bulletin-item entry bulletin-name">
+      <div class="line">
+        <span class="left">Organist</span>
+        <span class="right">Dale Swensen</span>
+      </div>
+    </div>
+
+    <div class="bulletin-item entry bulletin-hymn">
+      <div class="line">
+        <span class="left">Opening Hymn</span>
+        <span class="right">1062</span>
+      </div>
+      <div class="bulletin-hymn-title"><span>Lord, Accept Our Humble Fast</span></div>
+    </div>
+
+    <div class="bulletin-item entry bulletin-gap"></div>
+
+    <div class="bulletin-item entry bulletin-name">
+      <div class="line">
+        <span class="left">Opening Prayer</span>
+        <span class="right">Lyn Chapman</span>
+      </div>
+    </div>
+
+        <div class="bulletin-item entry bulletin-gap"></div>
+    <div class="bulletin-item entry bulletin-subheading">
+      <div class="align"><span>Stake Business</span></div>
+    </div>
+    
+        <div class="bulletin-item entry bulletin-gap"></div>
+    <div class="bulletin-item entry bulletin-subheading">
+      <div class="align"><span>Ward Business</span></div>
+    </div>
+    
+    <div class="bulletin-item entry bulletin-hymn">
+      <div class="line">
+        <span class="left">Sacrament Hymn</span>
+        <span class="right">175</span>
+      </div>
+      <div class="bulletin-hymn-title"><span>O God, the Eternal Father</span></div>
+    </div>
+
+    <div class="bulletin-item entry bulletin-gap medium"></div>
+
+    <div class="bulletin-item entry bulletin-title">
+      <div class="align"><span>The Sacrament</span></div>
+    </div>
+
+    <div class="bulletin-item entry bulletin-gap medium"></div>
+
+        <div class="bulletin-item entry bulletin-music">
+      <div class="line">
+        <span class="left">Testimonies</span>
+        <span class="right">Ward Members</span>
+      </div>
+            <div class="bulletin-music-title">
+        <span>Sharing of Testimonies</span>
+      </div>
+          </div>
+        <div class="bulletin-item entry bulletin-gap"></div>
+        <div class="bulletin-item entry bulletin-music">
+      <div class="line">
+        <span class="left">Closing Hymn</span>
+        <span class="right">5</span>
+      </div>
+      <div class="bulletin-music-title">
+        <span>High on the Mountain Top</span>
+      </div>
+    </div>
+        <div class="bulletin-item entry bulletin-gap"></div>
+    
+    <div class="bulletin-item entry bulletin-name">
+      <div class="line">
+        <span class="left">Closing Prayer</span>
+        <span class="right">Cliff Boshard</span>
+      </div>
+    </div>
+
+    <div class="bulletin-item entry bulletin-gap large"></div>
+
+    <div class="bulletin-item entry bulletin-title">
+      <div class="align"><span>Ward Announcements</span></div>
+    </div>
+
+    <div class="bulletin-item entry bulletin-styledtext">
+      <ul>
+                <li><p>Gosple Doctorine will meet in RS room, and Youth previously meeting in RS room will be meeting in Room #2</p></li>
+                <li><p>Stream Sunday meetings: <a href="https://local.churchofjesuschrist.org/en/units/us/ut/edgemont-21st-ward" target="_blank" rel="noopener">Ward website</a></p></li>
+              </ul>
+    </div>
+
+  </div>
+
+  <hr class="divider">
+</div>
+</body>
+</html>
