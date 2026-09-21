@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="minimum-scale=1, initial-scale=1, width=device-width">
+<title><?= data.wardName ?> Bulletin</title>
+<style>
+  /*
+    Same visual design as ward-bulletin-template.html, rewritten to use
+    Apps Script scriptlet tags instead of [Bracket] placeholders so
+    Code.gs's doGet() can render it directly from the spreadsheet.
+    See Code.gs for the dot-leader / grid explanation.
+  */
+
+  :root {
+    --accent: #364fc7;
+    --text: #1a1a1a;
+    --leader-string: " . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .";
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: #fff;
+    color: var(--text);
+  }
+
+  .page {
+    max-width: 1024px;
+    margin: 0 auto;
+    padding: 24px 16px 60px;
+  }
+
+  .bulletin-body {
+    font-family: Verdana, Arial, sans-serif;
+    font-size: 15px;
+    font-weight: 400;
+    line-height: 1.5;
+  }
+
+  .entry { width: 100%; padding: 1px 0; }
+
+  .bulletin-title .align,
+  .bulletin-date .align {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+  .bulletin-title .align { font-weight: bold; font-size: 20px; }
+  .bulletin-date .align { font-style: italic; font-size: 20px; }
+
+  /* A quieter section marker than .bulletin-title — used for optional
+     items (Stake/Ward Business) that shouldn't compete visually with
+     major headings like "The Sacrament". */
+  .bulletin-subheading .align {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    font-style: italic;
+    font-size: 14px;
+    color: #666;
+  }
+
+  .bulletin-gap { margin-top: 0em; }
+  .bulletin-gap.medium { margin-top: 1.25em; }
+  .bulletin-gap.large { margin-top: 2.5em; }
+
+  .line {
+    display: grid;
+    grid-template-columns: auto max-content;
+    grid-template-areas: "left right";
+    align-items: end;
+    gap: 0 0.25rem;
+  }
+  .line .left {
+    grid-area: left;
+    position: relative;
+    overflow: hidden;
+  }
+  .line .left::after {
+    content: var(--leader-string);
+    position: absolute;
+    padding-left: 0.25ch;
+    text-align: right;
+  }
+  .line .right { grid-area: right; }
+
+  .bulletin-hymn-title,
+  .bulletin-music-title {
+    text-align: center;
+    width: 100%;
+    font-style: italic;
+  }
+
+  .bulletin-styledtext ul { margin: 4px 0; padding-left: 22px; }
+  .bulletin-styledtext p { margin: 4px 0; }
+  .bulletin-styledtext a { color: var(--accent); }
+
+  .bulletin-article-heading,
+  .bulletin-styledtext-heading {
+    font-weight: 700;
+    text-decoration-line: underline;
+    margin-top: 4px;
+  }
+
+  .divider {
+    height: 2px;
+    background: var(--accent);
+    border: 0;
+    margin: 20px 0;
+  }
+
+  .app-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    background: var(--accent);
+    color: #fff;
+    opacity: 0.9;
+  }
+  .app-header h1 {
+    flex: 2 0 0;
+    margin: 0;
+    text-align: center;
+    font-size: 1.15rem;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+<header class="app-header">
+  <h1><?= data.wardName ?></h1>
+</header>
+<div class="page">
+  <div class="bulletin-body">
+
+    <div class="bulletin-item entry bulletin-title">
+      <div class="align"><span>Sacrament Meeting</span></div>
+    </div>
+    <div class="bulletin-item entry bulletin-date">
+      <div class="align"><span><?= data.date ?></span></div>
+    </div>
+
+    <div class="bulletin-item entry bulletin-gap"></div>
+
+    <div class="bulletin-item entry bulletin-name">
+      <div class="line">
+        <span class="left">Presiding</span>
+        <span class="right"><?= data.presiding ?></span>
+      </div>
+    </div>
+    <div class="bulletin-item entry bulletin-name">
+      <div class="line">
+        <span class="left">Conducting</span>
+        <span class="right"><?= data.conducting ?></span>
+      </div>
+    </div>
+    <div class="bulletin-item entry bulletin-name">
+      <div class="line">
+        <span class="left">Music Director</span>
+        <span class="right"><?= data.musicDirector ?></span>
+      </div>
+    </div>
+    <div class="bulletin-item entry bulletin-name">
+      <div class="line">
+        <span class="left">Organist</span>
+        <span class="right"><?= data.organist ?></span>
+      </div>
+    </div>
+
+    <div class="bulletin-item entry bulletin-hymn">
+      <div class="line">
+        <span class="left">Opening Hymn</span>
+        <span class="right"><?= data.openingHymnNum ?></span>
+      </div>
+      <div class="bulletin-hymn-title"><span><?= data.openingHymnTitle ?></span></div>
+    </div>
+
+    <div class="bulletin-item entry bulletin-gap"></div>
+
+    <div class="bulletin-item entry bulletin-name">
+      <div class="line">
+        <span class="left">Opening Prayer</span>
+        <span class="right"><?= data.openingPrayer ?></span>
+      </div>
+    </div>
+
+    <? if (data.hasStakeBusiness) { ?>
+    <div class="bulletin-item entry bulletin-gap"></div>
+    <div class="bulletin-item entry bulletin-subheading">
+      <div class="align"><span>Stake Business</span></div>
+    </div>
+    <? } ?>
+
+    <? if (data.hasWardBusiness) { ?>
+    <div class="bulletin-item entry bulletin-gap"></div>
+    <div class="bulletin-item entry bulletin-subheading">
+      <div class="align"><span>Ward Business</span></div>
+    </div>
+    <? } ?>
+
+    <div class="bulletin-item entry bulletin-hymn">
+      <div class="line">
+        <span class="left">Sacrament Hymn</span>
+        <span class="right"><?= data.sacramentHymnNum ?></span>
+      </div>
+      <div class="bulletin-hymn-title"><span><?= data.sacramentHymnTitle ?></span></div>
+    </div>
+
+    <div class="bulletin-item entry bulletin-gap medium"></div>
+
+    <div class="bulletin-item entry bulletin-title">
+      <div class="align"><span>The Sacrament</span></div>
+    </div>
+
+    <div class="bulletin-item entry bulletin-gap medium"></div>
+
+    <?
+      // Any number of speakers, hymns/musical numbers, and testimony
+      // rows (for a fast Sunday), in whatever order they appear in the
+      // sheet between "Sacrament Hymn" and "Benediction" — see
+      // getSacramentProgram_ in Code.gs.
+      for (var spi = 0; spi < data.sacramentProgram.length; spi++) {
+        var progItem = data.sacramentProgram[spi];
+        if (progItem.type === 'speaker') {
+    ?>
+    <div class="bulletin-item entry bulletin-name">
+      <div class="line">
+        <span class="left"><?= progItem.label ?></span>
+        <span class="right"><?= progItem.name ?></span>
+      </div>
+    </div>
+    <? } else if (progItem.type === 'testimony') { ?>
+    <div class="bulletin-item entry bulletin-music">
+      <div class="line">
+        <span class="left"><?= progItem.label ?></span>
+        <span class="right"><?= progItem.num ?></span>
+      </div>
+      <? if (progItem.title) { ?>
+      <div class="bulletin-music-title">
+        <span><?= progItem.title ?></span>
+      </div>
+      <? } ?>
+    </div>
+    <? } else { ?>
+    <div class="bulletin-item entry bulletin-music">
+      <div class="line">
+        <span class="left"><?= progItem.label ?></span>
+        <span class="right"><?= progItem.num ?></span>
+      </div>
+      <div class="bulletin-music-title">
+        <span><?= progItem.title ?></span>
+      </div>
+    </div>
+    <? } ?>
+    <div class="bulletin-item entry bulletin-gap"></div>
+    <? } ?>
+
+    <div class="bulletin-item entry bulletin-name">
+      <div class="line">
+        <span class="left">Closing Prayer</span>
+        <span class="right"><?= data.closingPrayer ?></span>
+      </div>
+    </div>
+
+    <div class="bulletin-item entry bulletin-gap large"></div>
+
+    <div class="bulletin-item entry bulletin-title">
+      <div class="align"><span>Ward Announcements</span></div>
+    </div>
+
+    <div class="bulletin-item entry bulletin-styledtext">
+      <ul>
+        <? if (data.announcementsHtml.length === 0) { ?>
+        <li><p>No announcements for this week.</p></li>
+        <? } else {
+             for (var i = 0; i < data.announcementsHtml.length; i++) { ?>
+        <li><p><?!= data.announcementsHtml[i] ?></p></li>
+        <?   }
+           } ?>
+      </ul>
+    </div>
+
+  </div>
+
+  <hr class="divider">
+</div>
+</body>
+</html>

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<meta charset="UTF-8">
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    font-size: 13px;
+    color: #1a1a1a;
+    padding: 4px 2px;
+  }
+  button {
+    display: block;
+    width: 100%;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    background: #364fc7;
+    color: #fff;
+  }
+  button.secondary {
+    background: #eef0fb;
+    color: #364fc7;
+  }
+  button:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+  button.secondary.highlight {
+    background: #fff3cd;
+    color: #7a5b00;
+    box-shadow: 0 0 0 2px #f0b100;
+    position: relative;
+  }
+  button.secondary.highlight::after {
+    content: "";
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #e8590c;
+    box-shadow: 0 0 0 0 rgba(232, 89, 12, 0.6);
+    animation: pulse 1.6s infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(232, 89, 12, 0.6); }
+    70% { box-shadow: 0 0 0 6px rgba(232, 89, 12, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(232, 89, 12, 0); }
+  }
+  #status {
+    margin-top: 4px;
+    line-height: 1.5;
+    min-height: 1em;
+    transition: opacity 0.4s ease;
+  }
+  #status a {
+    color: #364fc7;
+    word-break: break-all;
+  }
+  #status.error {
+    color: #c0392b;
+  }
+  .muted {
+    color: #666;
+    font-size: 12px;
+    margin-top: 20px;
+    line-height: 1.4;
+  }
+  .published {
+    margin: 2px 0 14px;
+    padding: 8px 10px;
+    background: #f4f5fb;
+    border-radius: 6px;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .published a {
+    color: #364fc7;
+    font-weight: 600;
+    text-decoration: none;
+  }
+  .published a:hover {
+    text-decoration: underline;
+  }
+  .published .meta {
+    color: #666;
+    margin-top: 2px;
+  }
+  .published .label {
+    color: #888;
+    font-weight: 600;
+  }
+</style>
+</head>
+<body>
+
+  <button id="publishBtn" onclick="doPublish()">Publish</button>
+  <button id="previewBtn" class="secondary" onclick="doPreview()">Preview</button>
+
+  <div class="published" id="publishedInfo">
+    <div><a id="viewPublishedLink" href="<?= pagesUrl ?>" target="_blank"<? if (!lastPublishedSheet) { ?> style="display:none"<? } ?>>View published bulletin ↗</a></div>
+    <? if (lastPublishedSheet) { ?>
+    <div class="meta" id="lastPublishedTab"><span class="label">Tab:</span> <?= lastPublishedSheet ?></div>
+    <div class="meta" id="lastPublishedTime"><span class="label">Published:</span> <?= lastPublishedAt ?></div>
+    <? } else { ?>
+    <div class="meta" id="lastPublishedTab">Nothing published yet.</div>
+    <div class="meta" id="lastPublishedTime" style="display:none"></div>
+    <? } ?>
+  </div>
+
+  <div id="status"></div>
+
+  <p class="muted">
+    <b>Publish</b> makes whichever sheet tab is active the live bulletin
+    everyone sees, and shows it right here when it's done.<br><br>
+    <b>Preview</b> shows you what it looks like first, before you
+    publish — it lights up whenever the active tab isn't a match for
+    what's actually live: a different tab, or this same one edited
+    since it was published.
+  </p>
+
+<script>
+// Filled in at render time (see showToolbar()'s hasChanges), so the
+// Preview button already reflects reality the instant the sidebar opens
+// — refreshPublishStatus() below then keeps it current afterward, since
+// the sheet can keep being edited (or published from elsewhere) while
+// the sidebar stays open.
+if (<?!= JSON.stringify(hasChanges) ?>) {
+  document.getElementById('previewBtn').classList.add('highlight');
+}
+
+var statusClearTimer = null;
+
+function setStatus(html, isError) {
+  if (statusClearTimer) { clearTimeout(statusClearTimer); statusClearTimer = null; }
+  var el = document.getElementById('status');
+  el.style.opacity = '1';
+  el.innerHTML = html;
+  el.className = isError ? 'error' : '';
+}
+
+/**
+ * A brief confirmation that fades out on its own a couple seconds later —
+ * used for Preview/Publish's plain success messages, since the modal
+ * that just opened (and, for Publish, the persistent panel above) is
+ * already the real confirmation; this is just a "yep, that worked."
+ */
+function setTransientStatus(html) {
+  setStatus(html, false);
+  var el = document.getElementById('status');
+  statusClearTimer = setTimeout(function () {
+    el.style.opacity = '0';
+    statusClearTimer = setTimeout(function () {
+      el.innerHTML = '';
+      el.style.opacity = '1';
+      statusClearTimer = null;
+    }, 400); // matches the #status CSS transition duration
+  }, 2000);
+}
+
+/**
+ * Re-checks the server's current publish status and updates the Preview
+ * button's highlight and the "last published" panel to match. This is
+ * what keeps the sidebar honest no matter which surface actually did
+ * the publishing — the sidebar's own Publish button, the "Ward
+ * Bulletin" menu, or the Preview modal's in-dialog Publish button all
+ * end up calling the same server-side publishBulletinForSidebar(), and
+ * none of those other surfaces can reach into this sidebar's JS
+ * directly to tell it something changed — so instead this just asks
+ * the server "what's the state right now?" on a timer (see setInterval
+ * below) and applies whatever it says.
+ */
+function refreshPublishStatus() {
+  google.script.run
+    .withSuccessHandler(function (status) {
+      document.getElementById('previewBtn').classList.toggle('highlight', status.hasChanges);
+      updatePublishedInfo(status);
+    })
+    .withFailureHandler(function () { /* ignore — just skip this check */ })
+    .getPublishStatus();
+}
+
+// Poll periodically so the sidebar stays current while it's open — from
+// further edits, switching to a different tab than the one that's
+// live, or a publish/preview made from the menu or a dialog instead of
+// this sidebar.
+setInterval(refreshPublishStatus, 4000);
+
+/** Updates the "last published" panel in place — after this sidebar's own publish, and on every periodic refreshPublishStatus() tick. */
+function updatePublishedInfo(status) {
+  var link = document.getElementById('viewPublishedLink');
+  var tabEl = document.getElementById('lastPublishedTab');
+  var timeEl = document.getElementById('lastPublishedTime');
+
+  if (status.sheetName) {
+    link.href = status.pagesUrl;
+    link.style.display = '';
+    tabEl.innerHTML = '<span class="label">Tab:</span> ' + escapeHtmlClient_(status.sheetName);
+    timeEl.style.display = '';
+    timeEl.innerHTML = '<span class="label">Published:</span> ' + escapeHtmlClient_(status.publishedAt);
+  } else {
+    link.style.display = 'none';
+    tabEl.textContent = 'Nothing published yet.';
+    timeEl.style.display = 'none';
+  }
+}
+
+/** Minimal client-side escaping for the plain text updatePublishedInfo() interpolates into innerHTML. */
+function escapeHtmlClient_(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+/**
+ * Rewrites Google's raw "Authorization is required to perform that
+ * action" into something the person can actually act on. A button
+ * click here goes through google.script.run, and Apps Script's
+ * authorization popup can never appear from a google.script.run call —
+ * only a direct "Ward Bulletin" menu click can trigger it — so a newly
+ * shared editor who's never used one hits this exact error with no way
+ * to fix it from the message alone. Any other error passes through
+ * unchanged.
+ */
+function friendlyError_(err) {
+  var msg = (err && err.message) || String(err);
+  if (/authorization is required/i.test(msg)) {
+    return 'This account hasn\'t authorized this tool yet. Use any ' +
+      '"Ward Bulletin" menu item once (Publish, Preview, or Show ' +
+      'Toolbar) — it\'ll prompt you to grant access — then try again.';
+  }
+  return msg;
+}
+
+function doPublish() {
+  var btn = document.getElementById('publishBtn');
+  btn.disabled = true;
+  setStatus('Publishing…');
+
+  google.script.run
+    .withSuccessHandler(function (result) {
+      btn.disabled = false;
+      document.getElementById('previewBtn').classList.remove('highlight');
+      updatePublishedInfo(result);
+      setTransientStatus('✓ Published.');
+    })
+    .withFailureHandler(function (err) {
+      btn.disabled = false;
+      setStatus(friendlyError_(err), true);
+    })
+    .publishBulletinForSidebar();
+}
+
+function doPreview() {
+  var btn = document.getElementById('previewBtn');
+  btn.disabled = true;
+  setStatus('Opening preview…');
+
+  google.script.run
+    .withSuccessHandler(function () {
+      btn.disabled = false;
+      setTransientStatus('✓ Preview opened.');
+    })
+    .withFailureHandler(function (err) {
+      btn.disabled = false;
+      setStatus(friendlyError_(err), true);
+    })
+    .previewInModal();
+}
+</script>
+
+</body>
+</html>
