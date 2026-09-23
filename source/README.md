@@ -19,8 +19,10 @@ bulletin was for.
 | `06_Dropdowns.gs` | Type-ahead dropdowns for songs, speakers and leadership, plus the Date auto-fill. |
 | `07_BulletinTabs.gs` | Creating each week's tab, and showing/hiding the reference tabs. |
 | `08_Songs.gs` | "Update Songs": adds newly released Hymns for Home and Church hymns to the Songs tab, from the Church's website. |
+| `09_Members.gs` | "Update Ward Members": syncs the Members tab to LCR's Member List (its PDF export, or the list pasted in), after a review of every change. |
 | `Template.html` | The bulletin itself — layout and styling. |
 | `Sidebar.html` | The Publish/Preview sidebar. |
+| `MembersDialog.html` | The Update Ward Members dialog: choose the PDF (read in the browser with pdf.js) or paste, review, apply. |
 | `appsscript.json` | The project manifest — timezone, V8 runtime, and the web app's execute-as/access settings. Apps Script hides this by default; see "Editing in the browser" below. |
 
 This README is the only file here that isn't part of the script —
@@ -119,4 +121,4 @@ Apps Script > Run workflow, or:
 gh workflow run push-to-apps-script.yml
 ```
 
-A successful run logs the file count, e.g. `Pushed 11 files`.
+A successful run logs the file count, e.g. `Pushed 13 files`.

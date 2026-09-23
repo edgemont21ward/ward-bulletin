@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<meta charset="UTF-8">
+<!--
+  The "Update Ward Members" dialog (see 09_Members.gs). Three views:
+  load the list, review every change, then the result. Nothing touches
+  the Members tab until "Apply" on the review view, and the list itself
+  only ever goes to this spreadsheet's own script.
+
+  A PDF is read right here in the browser, by pdf.js, loaded only when
+  one is chosen and pinned to an exact file by its integrity hash.
+  pdfPagesToText turns its text back into tab-separated rows and puts
+  them in the text box, so what was read can be checked before Review.
+-->
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    font-size: 13px;
+    color: #1a1a1a;
+    margin: 0;
+    padding: 2px 4px;
+  }
+  p { margin: 0 0 10px; line-height: 1.45; }
+  .muted { color: #5f6368; }
+  textarea {
+    width: 100%;
+    box-sizing: border-box;
+    height: 250px;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12px;
+    padding: 8px;
+    border: 1px solid #c4c7c5;
+    border-radius: 6px;
+    resize: vertical;
+  }
+  .file-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+  button {
+    padding: 9px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    background: #364fc7;
+    color: #fff;
+  }
+  button.secondary { background: #eef0fb; color: #364fc7; }
+  button.danger { background: #c92a2a; }
+  button:disabled { opacity: 0.6; cursor: default; }
+  .summary { display: flex; gap: 8px; margin-bottom: 12px; }
+  .stat {
+    flex: 1;
+    border: 1px solid #e3e5e8;
+    border-radius: 6px;
+    padding: 8px 10px;
+  }
+  .stat b { display: block; font-size: 20px; }
+  .warning {
+    background: #fff3cd;
+    border: 1px solid #f0b100;
+    color: #5c4400;
+    border-radius: 6px;
+    padding: 9px 11px;
+    margin-bottom: 12px;
+    line-height: 1.45;
+  }
+  .error {
+    background: #fdecea;
+    border: 1px solid #e03131;
+    color: #8a1c1c;
+    border-radius: 6px;
+    padding: 9px 11px;
+    margin-top: 10px;
+    line-height: 1.45;
+  }
+  .lists { max-height: 300px; overflow-y: auto; }
+  details { border-top: 1px solid #e3e5e8; padding: 7px 0; }
+  summary { cursor: pointer; font-weight: 600; }
+  ul { margin: 6px 0 2px; padding-left: 20px; }
+  li { margin: 2px 0; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+<div id="dialog-token" data-token="<?= token ?>" hidden></div>
+
+<section id="input-view">
+  <p>Choose the Member List PDF exported from LCR (Membership &gt; Member
+     List). Or copy the list, including its heading row, and paste it below.
+     The Name, Gender and Age columns are used; any others are ignored.</p>
+  <div class="file-row">
+    <input type="file" id="file" accept=".pdf,.csv,.tsv,.txt,application/pdf,text/csv,text/plain">
+    <span id="file-note" class="muted"></span>
+  </div>
+  <textarea id="list" placeholder="Name&#9;Gender&#9;Age&#10;Allan, Eric&#9;M&#9;41&#10;...&#10;&#10;(A chosen PDF's text appears here.)" spellcheck="false"></textarea>
+  <div id="input-error" class="error" hidden></div>
+  <div class="actions">
+    <button class="secondary" onclick="google.script.host.close()">Cancel</button>
+    <button id="review-btn" onclick="review()">Review changes</button>
+  </div>
+</section>
+
+<section id="review-view" hidden>
+  <div class="summary">
+    <div class="stat"><b id="n-add">0</b>to add</div>
+    <div class="stat"><b id="n-update">0</b>to update</div>
+    <div class="stat"><b id="n-remove">0</b>to remove</div>
+    <div class="stat"><b id="n-same">0</b>unchanged</div>
+  </div>
+  <div id="warning" class="warning" hidden></div>
+  <p id="totals" class="muted"></p>
+  <div class="lists" id="lists"></div>
+  <div id="review-error" class="error" hidden></div>
+  <div class="actions">
+    <button class="secondary" onclick="show('input-view')">Back</button>
+    <button id="apply-btn" onclick="apply()">Apply changes</button>
+  </div>
+</section>
+
+<section id="done-view" hidden>
+  <p id="done-text"></p>
+  <p class="muted">The speaker dropdowns on this week's tab now use the updated list.</p>
+  <div class="actions">
+    <button onclick="google.script.host.close()">Close</button>
+  </div>
+</section>
+
+<script>
+  var TOKEN = document.getElementById('dialog-token').getAttribute('data-token');
+  var reviewedText = '';
+  var reviewedFingerprint = '';
+
+  function el(id) { return document.getElementById(id); }
+
+  function show(id) {
+    ['input-view', 'review-view', 'done-view'].forEach(function (v) { el(v).hidden = (v !== id); });
+  }
+
+  function showError(id, err) {
+    var box = el(id);
+    box.textContent = (err && err.message) ? err.message : String(err);
+    box.hidden = false;
+  }
+
+  el('file').addEventListener('change', function () {
+    var file = this.files[0];
+    if (!file) return;
+    el('input-error').hidden = true;
+    if (/\.pdf$/i.test(file.name) || file.type === 'application/pdf') {
+      readPdf(file);
+      return;
+    }
+    if (/\.xlsx?$/i.test(file.name)) {
+      el('file-note').textContent = '';
+      showError('input-error', 'That\'s an Excel file. Save it as CSV first, or open it and copy the table instead.');
+      return;
+    }
+    var reader = new FileReader();
+    reader.onload = function () {
+      el('list').value = reader.result;
+      el('file-note').textContent = 'Loaded ' + file.name + '.';
+      el('input-error').hidden = true;
+    };
+    reader.onerror = function () { showError('input-error', 'Couldn\'t read ' + file.name + '.'); };
+    reader.readAsText(file);
+  });
+
+  // pdf.js, from cdnjs. The worker file is loaded as a plain script too,
+  // which makes pdf.js parse on this page instead of spawning a Web
+  // Worker — slower on a huge file, but a ward list is a few pages, and
+  // it avoids depending on whether this sandboxed frame may start one.
+  var PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+  var PDFJS_FILES = [
+    ['pdf.min.js', 'sha512-q+4liFwdPC/bNdhUpZx6aXDx/h77yEQtn4I1slHydcbZK34nLaR3cAeYSJshoxIOq3mjEf7xJE8YWIUHMn+oCQ=='],
+    ['pdf.worker.min.js', 'sha512-BbrZ76UNZq5BhH7LL7pn9A4TKQpQeNCHOo65/akfelcIBbcVvYWOFQKPXIrykE3qZxYjmDX573oa4Ywsc7rpTw==']
+  ];
+  var pdfJsReady = null;
+
+  function loadPdfJs() {
+    if (pdfJsReady) return pdfJsReady;
+    pdfJsReady = PDFJS_FILES.reduce(function (prev, f) {
+      return prev.then(function () {
+        return new Promise(function (resolve, reject) {
+          var tag = document.createElement('script');
+          tag.src = PDFJS + f[0];
+          tag.integrity = f[1];
+          tag.crossOrigin = 'anonymous';
+          tag.onload = resolve;
+          tag.onerror = function () { reject(new Error('Couldn\'t load the PDF reader. Check the connection, or copy the list out of the PDF and paste it instead.')); };
+          document.head.appendChild(tag);
+        });
+      });
+    }, Promise.resolve()).then(function () {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS + 'pdf.worker.min.js';
+    });
+    pdfJsReady.catch(function () { pdfJsReady = null; }); // allow a retry
+    return pdfJsReady;
+  }
+
+  function readPdf(file) {
+    el('file-note').textContent = 'Reading ' + file.name + '\u2026';
+    el('review-btn').disabled = true;
+    var numPages = 0;
+    loadPdfJs()
+      .then(function () { return file.arrayBuffer(); })
+      .then(function (buf) { return pdfjsLib.getDocument({ data: new Uint8Array(buf) }).promise; })
+      .then(function (pdf) {
+        numPages = pdf.numPages;
+        var pages = [];
+        var chain = Promise.resolve();
+        for (var n = 1; n <= pdf.numPages; n++) {
+          chain = chain.then(pdf.getPage.bind(pdf, n))
+            .then(function (page) { return page.getTextContent(); })
+            .then(function (content) { pages.push(content.items.map(pdfItem)); });
+        }
+        return chain.then(function () { return pages; });
+      })
+      .then(function (pages) {
+        el('list').value = pdfPagesToText(pages);
+        el('file-note').textContent = 'Read ' + numPages + (numPages === 1 ? ' page' : ' pages') +
+          ' from ' + file.name + '. Check the text below, then Review.';
+      })
+      .catch(function (err) {
+        el('file-note').textContent = '';
+        showError('input-error', err);
+      })
+      .then(function () { el('review-btn').disabled = false; });
+  }
+
+  /** A pdf.js text item, reduced to what pdfPagesToText needs. */
+  function pdfItem(it) {
+    return {
+      str: it.str,
+      x: it.transform[4],
+      y: it.transform[5],
+      w: it.width,
+      h: Math.abs(it.transform[3]) || it.height || 10
+    };
+  }
+
+  /**
+   * Turns the text items of each page — [[{str, x, y, w, h}]], x/y in
+   * PDF points from the bottom-left — back into tab-separated rows.
+   *
+   * Items on the same baseline form a line. Within a line, items with
+   * only a word-sized gap between them are one run of text ("Wilcox,"
+   * + "Lenora Ruth"); a wider gap starts a new run.
+   *
+   * Runs are then placed by the column headings: the line containing a
+   * "Name" run plus "Gender" or "Age" is the heading, each of its runs
+   * starts a column, and every later run goes to the column whose
+   * heading it sits under (the boundary between two columns being
+   * halfway between their headings). Splitting on gaps alone would let
+   * a blank cell shift everything after it one column left; this way a
+   * missing value stays a missing value. Lines before any heading, like
+   * the report title, are passed through with their runs as cells.
+   */
+  function pdfPagesToText(pages) {
+    var columns = null; // x of each heading, left to right
+    var out = [];
+    pages.forEach(function (items) {
+      var parts = items.filter(function (it) { return it.str && it.str.trim(); });
+      parts.sort(function (a, b) { return (b.y - a.y) || (a.x - b.x); });
+
+      var lines = [];
+      parts.forEach(function (it) {
+        var line = lines[lines.length - 1];
+        if (line && Math.abs(line.y - it.y) <= Math.max(2, 0.4 * it.h)) line.items.push(it);
+        else lines.push({ y: it.y, items: [it] });
+      });
+
+      lines.forEach(function (line) {
+        var runs = toRuns(line.items);
+        var names = runs.map(function (r) { return r.text.toLowerCase(); });
+        var isHeading = names.some(function (t) { return /^(preferred |member |full )?name$/.test(t); }) &&
+          names.some(function (t) { return t === 'gender' || t === 'sex' || t === 'age'; });
+        if (isHeading) columns = runs.map(function (r) { return r.x; });
+
+        if (!columns || isHeading) {
+          out.push(runs.map(function (r) { return r.text; }).join('\t'));
+          return;
+        }
+        var cells = columns.map(function () { return []; });
+        runs.forEach(function (r) {
+          var c = 0;
+          while (c < columns.length - 1 && r.x >= (columns[c] + columns[c + 1]) / 2) c++;
+          cells[c].push(r.text);
+        });
+        out.push(cells.map(function (c) { return c.join(' '); }).join('\t'));
+      });
+    });
+    return out.join('\n');
+  }
+
+  /** Joins a line's items, left to right, into runs split at column-sized gaps. */
+  function toRuns(items) {
+    items = items.slice().sort(function (a, b) { return a.x - b.x; });
+    var runs = [];
+    var end = null;
+    items.forEach(function (it) {
+      var gap = end === null ? Infinity : it.x - end;
+      var text = it.str.replace(/\s+/g, ' ');
+      if (gap > Math.max(4, 0.6 * it.h)) {
+        runs.push({ x: it.x, text: text.trim() });
+      } else {
+        var run = runs[runs.length - 1];
+        run.text = (run.text + (gap > 0.1 * it.h ? ' ' : '') + text).replace(/\s+/g, ' ').trim();
+      }
+      end = it.x + it.w;
+    });
+    return runs.filter(function (r) { return r.text; });
+  }
+
+  function review() {
+    el('input-error').hidden = true;
+    var text = el('list').value;
+    el('review-btn').disabled = true;
+    el('review-btn').textContent = 'Reading…';
+    google.script.run
+      .withSuccessHandler(function (plan) {
+        el('review-btn').disabled = false;
+        el('review-btn').textContent = 'Review changes';
+        reviewedText = text;
+        reviewedFingerprint = plan.fingerprint;
+        renderReview(plan);
+        show('review-view');
+      })
+      .withFailureHandler(function (err) {
+        el('review-btn').disabled = false;
+        el('review-btn').textContent = 'Review changes';
+        showError('input-error', err);
+      })
+      .previewMemberUpdate(TOKEN, text);
+  }
+
+  // Built with textContent, never innerHTML — these are people's names.
+  function renderReview(plan) {
+    el('n-add').textContent = plan.adds.length;
+    el('n-update').textContent = plan.updates.length;
+    el('n-remove').textContent = plan.removes.length;
+    el('n-same').textContent = plan.unchanged;
+    el('totals').textContent = 'The Members tab goes from ' + plan.before + ' to ' + plan.after + ' people.';
+
+    el('warning').hidden = !plan.warning;
+    el('warning').textContent = plan.warning || '';
+    el('review-error').hidden = true;
+
+    var lists = el('lists');
+    lists.textContent = '';
+    addList(lists, 'Add', plan.adds, true);
+    addList(lists, 'Update', plan.updates, true);
+    addList(lists, 'Remove', plan.removes, true);
+    addList(lists, 'Not read as members (skipped)', plan.ignored, false);
+
+    var changes = plan.adds.length + plan.updates.length + plan.removes.length;
+    el('apply-btn').disabled = !changes;
+    el('apply-btn').textContent = changes ? 'Apply changes' : 'Nothing to change';
+    el('apply-btn').className = plan.warning ? 'danger' : '';
+  }
+
+  function addList(parent, label, items, open) {
+    if (!items.length) return;
+    var d = document.createElement('details');
+    d.open = open && items.length <= 25;
+    var s = document.createElement('summary');
+    s.textContent = label + ' (' + items.length + ')';
+    d.appendChild(s);
+    var ul = document.createElement('ul');
+    items.forEach(function (text) {
+      var li = document.createElement('li');
+      li.textContent = text;
+      ul.appendChild(li);
+    });
+    d.appendChild(ul);
+    parent.appendChild(d);
+  }
+
+  function apply() {
+    el('review-error').hidden = true;
+    el('apply-btn').disabled = true;
+    el('apply-btn').textContent = 'Applying…';
+    google.script.run
+      .withSuccessHandler(function (r) {
+        el('done-text').textContent =
+          'Members tab updated: ' + r.added + ' added, ' + r.updated + ' updated, ' +
+          r.removed + ' removed. It now lists ' + r.after + ' people (was ' + r.before + ').';
+        show('done-view');
+      })
+      .withFailureHandler(function (err) {
+        el('apply-btn').disabled = false;
+        el('apply-btn').textContent = 'Apply changes';
+        showError('review-error', err);
+      })
+      .applyMemberUpdate(TOKEN, reviewedText, reviewedFingerprint);
+  }
+</script>
+</body>
+</html>

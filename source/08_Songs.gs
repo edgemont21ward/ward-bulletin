@@ -241,15 +241,15 @@ function normalizeSongTitle_(title) {
 
 /** ‘ ’ -> '   and   “ ” -> " */
 function straightenQuotes_(s) {
-  return String(s).replace(/[‘’]/g, '\'').replace(/[“”]/g, '"');
+  return String(s).replace(/[\u2018\u2019]/g, '\'').replace(/[\u201C\u201D]/g, '"');
 }
 
 
 /** Decodes the named and numeric HTML entities a title might contain. */
 function decodeHtmlEntities_(s) {
   var named = { amp: '&', lt: '<', gt: '>', quot: '"', apos: '\'', nbsp: ' ',
-                rsquo: '’', lsquo: '‘', rdquo: '”', ldquo: '“',
-                mdash: '—', ndash: '–', hellip: '…' };
+                rsquo: '\u2019', lsquo: '\u2018', rdquo: '\u201D', ldquo: '\u201C',
+                mdash: '\u2014', ndash: '\u2013', hellip: '\u2026' };
   return String(s).replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, function (whole, code) {
     if (code.charAt(0) === '#') {
       var n = code.charAt(1).toLowerCase() === 'x' ? parseInt(code.slice(2), 16) : parseInt(code.slice(1), 10);

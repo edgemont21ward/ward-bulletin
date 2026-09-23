@@ -94,6 +94,7 @@ function buildMenu_() {
     .addItem('🆕 Create New Bulletin', 'createNewBulletinFromMenu')
     .addItem('🔄 Refresh Dropdowns', 'refreshDropdownsFromMenu')
     .addItem('🎵 Update Songs', 'updateSongsFromMenu')
+    .addItem('👥 Update Ward Members', 'updateMembersFromMenu')
     .addSeparator();
 
   if (hidden) {
