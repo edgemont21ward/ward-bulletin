@@ -14,6 +14,15 @@ var DROPDOWN_HELPER_COL_ = 4; // column D on the Songs/Members sheets
 var HIGH_COUNCIL_FIELD_LABEL_ = 'recognize stake high councilors and other stake leaders';
 
 
+// Exact labels for the two rows inside the "Stake Business" section.
+// Both draw on the Leadership sheet rather than Members: whoever
+// presents stake business is a member of the Stake Presidency or the
+// High Council, and the position named beside them is their stake
+// calling, so offering the whole ward roster would be wrong on both.
+var STAKE_PRESENTER_FIELD_LABEL_ = 'presented by';
+var STAKE_POSITION_FIELD_LABEL_ = 'stake leaders position';
+
+
 // Exact-match labels whose column-B value is a person, not a song —
 // checked before the generic "hymn"/"music" substring test below, since
 // "Recognize Music Director" would otherwise match on "music" and get
@@ -41,6 +50,9 @@ function refreshDropdowns_(sheet) {
   var memberRange = getMemberDropdownRange_(ss);
   var leadership = getLeadershipNames_(ss);
   var presidingNames = leadership.bishopric.concat(leadership.stakePresidency);
+  // Stake Presidency first, then the High Council — the order the
+  // Leadership sheet itself lists them in.
+  var stakePresenterNames = leadership.stakePresidency.concat(leadership.highCouncil);
 
   var songRule = songRange
     ? SpreadsheetApp.newDataValidation()
@@ -85,6 +97,24 @@ function refreshDropdowns_(sheet) {
         .build()
     : null;
 
+  var stakePresenterRule = stakePresenterNames.length
+    ? SpreadsheetApp.newDataValidation()
+        .requireValueInList(stakePresenterNames, true)
+        .setAllowInvalid(true)
+        .setHelpText('Start typing to search the Stake Presidency/High Council, or type your own.')
+        .build()
+    : null;
+
+  // The Role column rather than the Name column — "High Council
+  // Member", "Stake President", and so on.
+  var stakePositionRule = leadership.stakeRoles.length
+    ? SpreadsheetApp.newDataValidation()
+        .requireValueInList(leadership.stakeRoles, true)
+        .setAllowInvalid(true)
+        .setHelpText('Start typing to search the stake callings on the Leadership sheet, or type your own.')
+        .build()
+    : null;
+
   var data = sheet.getDataRange().getValues();
   for (var i = 0; i < data.length; i++) {
     var label = normalizeLabel_(data[i][0]);
@@ -98,6 +128,10 @@ function refreshDropdowns_(sheet) {
       sheet.getRange(i + 1, 2).setDataValidation(presidingRule);
     } else if (highCouncilRule && label === HIGH_COUNCIL_FIELD_LABEL_) {
       sheet.getRange(i + 1, 2).setDataValidation(highCouncilRule);
+    } else if (stakePresenterRule && label === STAKE_PRESENTER_FIELD_LABEL_) {
+      sheet.getRange(i + 1, 2).setDataValidation(stakePresenterRule);
+    } else if (stakePositionRule && label === STAKE_POSITION_FIELD_LABEL_) {
+      sheet.getRange(i + 1, 2).setDataValidation(stakePositionRule);
     } else if (memberRule && isPersonField) {
       sheet.getRange(i + 1, 2).setDataValidation(memberRule);
     } else if (songRule && (label.indexOf('hymn') !== -1 || label.indexOf('music') !== -1)) {
@@ -258,30 +292,45 @@ function getMemberDropdownRange_(ss) {
  * - highCouncil: for "Recognize Stake High Councilors and other Stake
  *   Leaders" — can hold any number of rows (a stake usually has several
  *   high councilors), unlike the other two roles.
- * All three come back empty if the Leadership sheet doesn't exist yet.
+ * Also returns stakeRoles: the Role cells themselves, for the rows that
+ * landed in stakePresidency or highCouncil, de-duplicated and in sheet
+ * order ("Stake President", "Stake Presidency 1st Counselor", ...,
+ * "High Council Member"). That's the list behind the "Stake Leaders
+ * Position:" dropdown, so it stays whatever the sheet says — fix a
+ * misspelt calling there and the dropdown follows.
+ * All four come back empty if the Leadership sheet doesn't exist yet.
  */
 function getLeadershipNames_(ss) {
   var sheet = ss.getSheetByName(LEADERSHIP_SHEET_NAME_);
-  if (!sheet) return { bishopric: [], stakePresidency: [], highCouncil: [] };
+  if (!sheet) return { bishopric: [], stakePresidency: [], highCouncil: [], stakeRoles: [] };
 
   var rows = sheet.getDataRange().getValues();
   var bishopric = [];
   var stakePresidency = [];
   var highCouncil = [];
+  var stakeRoles = [];
   for (var i = 1; i < rows.length; i++) { // row 1 is the header
-    var role = String(rows[i][0] == null ? '' : rows[i][0]).trim().toLowerCase();
+    var roleText = String(rows[i][0] == null ? '' : rows[i][0]).trim();
+    var role = roleText.toLowerCase();
     var name = String(rows[i][1] == null ? '' : rows[i][1]).trim();
     if (!name) continue;
 
     if (role.indexOf('high council') !== -1) {
       highCouncil.push(name);
+      if (stakeRoles.indexOf(roleText) === -1) stakeRoles.push(roleText);
     } else if (role.indexOf('bishop') !== -1) {
       bishopric.push(name);
     } else if (role.indexOf('stake') !== -1) {
       stakePresidency.push(name);
+      if (stakeRoles.indexOf(roleText) === -1) stakeRoles.push(roleText);
     }
   }
-  return { bishopric: bishopric, stakePresidency: stakePresidency, highCouncil: highCouncil };
+  return {
+    bishopric: bishopric,
+    stakePresidency: stakePresidency,
+    highCouncil: highCouncil,
+    stakeRoles: stakeRoles
+  };
 }
 
 /* ---------------------------------------------------------------------

@@ -134,9 +134,25 @@ function getSacramentProgram_(data) {
 }
 
 
-/** Normalizes a label for comparison: trims, drops a trailing colon, lowercases. */
+/**
+ * Normalizes a label for comparison: trims, drops a trailing colon,
+ * lowercases, and spells "buisness" the way the rest of this file
+ * looks it up.
+ *
+ * That last one is a safety net, not the fix. The typo came from the
+ * Template tab and spread to every week built from it, hiding the
+ * Stake Business heading (see the repair in 07_BulletinTabs.gs, which
+ * corrects the sheet itself). Folding it in here means a tab that
+ * picks the typo up again still renders correctly rather than dropping
+ * the section silently. Drop this clause if the sheets are ever
+ * guaranteed clean.
+ */
 function normalizeLabel_(s) {
-  return String(s == null ? '' : s).trim().replace(/:$/, '').toLowerCase();
+  return String(s == null ? '' : s)
+    .trim()
+    .replace(/:$/, '')
+    .toLowerCase()
+    .replace(/buisness/g, 'business');
 }
 
 
