@@ -10,6 +10,7 @@
     "source/04_Preview.gs",
     "source/05_BulletinData.gs",
     "source/06_Dropdowns.gs",
-    "source/07_BulletinTabs.gs"
+    "source/07_BulletinTabs.gs",
+    "source/08_Songs.gs"
   ]
 }

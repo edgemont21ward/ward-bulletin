@@ -23,9 +23,9 @@
  *    repo's .clasp.json. Delete the default empty Code.gs.
  * 3. Push the code in from the repo, rather than pasting it file by
  *    file — commit to main and the "Push to Apps Script" workflow runs
- *    clasp push, which creates all ten files (01_Config through
- *    07_BulletinTabs, Template, Sidebar, and the appsscript.json
- *    manifest) in one go. Setup for that, including the credentials it
+ *    clasp push, which creates all eleven files (01_Config through
+ *    08_Songs, Template, Sidebar, and the appsscript.json manifest) in
+ *    one go. Setup for that, including the credentials it
  *    needs, is in source/README.md under "Automatic deploys". The
  *    numeric prefixes keep the script files in a sensible reading order
  *    in the editor's file list; see the note below on why 01_Config.gs
@@ -93,7 +93,9 @@
  *   "Songs" and "Members" sheet tabs — see 06_Dropdowns.gs for how it's
  *   built and refreshed. Typing something not on either list is still
  *   accepted (just flagged with a small warning triangle), so this never
- *   blocks a guest speaker or a hymn outside the hymnal.
+ *   blocks a guest speaker or a hymn outside the hymnal. "Ward Bulletin >
+ *   Update Songs" adds newly released Hymns for Home and Church hymns
+ *   to the Songs tab from the Church's website — see 08_Songs.gs.
  * - "Ward Bulletin > Create New Bulletin" duplicates a "Template" tab
  *   into a new tab for the closest upcoming Sunday — see
  *   07_BulletinTabs.gs. You need to add that Template tab yourself (a

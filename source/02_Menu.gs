@@ -93,6 +93,7 @@ function buildMenu_() {
     .addSeparator()
     .addItem('🆕 Create New Bulletin', 'createNewBulletinFromMenu')
     .addItem('🔄 Refresh Dropdowns', 'refreshDropdownsFromMenu')
+    .addItem('🎵 Update Songs', 'updateSongsFromMenu')
     .addSeparator();
 
   if (hidden) {
