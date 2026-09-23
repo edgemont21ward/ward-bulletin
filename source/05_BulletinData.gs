@@ -134,24 +134,9 @@ function getSacramentProgram_(data) {
 }
 
 
-/**
- * Normalizes a label for comparison: trims, drops a trailing colon,
- * lowercases, and folds misspellings of "business" into the real word.
- *
- * That last step exists because the Stake Business header is typed by
- * hand, and has been got wrong more than once — "BUISNESS", then
- * "BUISSNESS". hasStakeBusinessContent_ finds the section by exact
- * label, so any misspelling hides the heading from the bulletin
- * without an error. /bu[is]+ness/ covers the swapped and doubled
- * letters seen so far (plus "busness"), and also matches "business"
- * itself, so a correctly spelt header passes through unchanged.
- */
+/** Normalizes a label for comparison: trims, drops a trailing colon, lowercases. */
 function normalizeLabel_(s) {
-  return String(s == null ? '' : s)
-    .trim()
-    .replace(/:$/, '')
-    .toLowerCase()
-    .replace(/bu[is]+ness/g, 'business');
+  return String(s == null ? '' : s).trim().replace(/:$/, '').toLowerCase();
 }
 
 
