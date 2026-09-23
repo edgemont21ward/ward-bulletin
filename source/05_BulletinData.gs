@@ -136,23 +136,22 @@ function getSacramentProgram_(data) {
 
 /**
  * Normalizes a label for comparison: trims, drops a trailing colon,
- * lowercases, and spells "buisness" the way the rest of this file
- * looks it up.
+ * lowercases, and folds misspellings of "business" into the real word.
  *
- * That last one is a safety net, not the fix. The typo came from the
- * Template tab and spread to every week built from it, hiding the
- * Stake Business heading (see the repair in 07_BulletinTabs.gs, which
- * corrects the sheet itself). Folding it in here means a tab that
- * picks the typo up again still renders correctly rather than dropping
- * the section silently. Drop this clause if the sheets are ever
- * guaranteed clean.
+ * That last step exists because the Stake Business header is typed by
+ * hand, and has been got wrong more than once — "BUISNESS", then
+ * "BUISSNESS". hasStakeBusinessContent_ finds the section by exact
+ * label, so any misspelling hides the heading from the bulletin
+ * without an error. /bu[is]+ness/ covers the swapped and doubled
+ * letters seen so far (plus "busness"), and also matches "business"
+ * itself, so a correctly spelt header passes through unchanged.
  */
 function normalizeLabel_(s) {
   return String(s == null ? '' : s)
     .trim()
     .replace(/:$/, '')
     .toLowerCase()
-    .replace(/buisness/g, 'business');
+    .replace(/bu[is]+ness/g, 'business');
 }
 
 
