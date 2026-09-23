@@ -1,11 +1,15 @@
 /**
  * CONFIGURATION
  * Ward name, GitHub Pages destination, and the sheet/tab names every
- * other file looks up by name (Songs, Members, Leadership, Template). Loads first — SONGS_SHEET_NAME_ etc. must be
- * defined before UTILITY_SHEET_NAMES_ below reads them, and Apps Script
- * runs each file's top-level `var` statements in the order the files
- * are listed in the editor's left-hand file list (drag to reorder there
- * if that list is ever changed — see the note in 02_Menu.gs).
+ * other file looks up by name (Songs, Members, Leadership, Template).
+ *
+ * This file loads first, and that matters. Apps Script joins every file
+ * into one script, running each file's top-level `var` statements in
+ * file order (the order .clasp.json's filePushOrder lists them in).
+ * Functions are hoisted, so they can live anywhere, but a `var` that
+ * reads another `var` (UTILITY_SHEET_NAMES_ below reads
+ * SONGS_SHEET_NAME_ etc.) only works if that other one already ran. So
+ * every such value lives here.
  */
 
 /**
@@ -13,8 +17,8 @@
  * ---------------------------------------------
  * Bound to the "Sacrament Meeting 2026" spreadsheet. Reads whichever
  * sheet tab is currently active (e.g. "August 30, 2026") and renders it
- * into Template.html (a copy of ward-bulletin-template.html rewritten to
- * use Apps Script scriptlets, <?= ... ?>, instead of [Bracket] tokens).
+ * with Template.html, the bulletin's layout, which Apps Script fills in
+ * through its <?= ... ?> scriptlet tags.
  *
  * SETUP (one-time)
  * 1. In the spreadsheet: Extensions > Apps Script.
@@ -52,7 +56,7 @@
  * label in the sheet, update the matching string in the field-label lists
  * near the top of 05_BulletinData.gs (KNOWN_FIELD_LABELS_, etc.).
  *
- * KNOWN LIMITATIONS (see the message in chat for more detail)
+ * WORTH KNOWING
  * - Between "Sacrament Hymn" and "Benediction", any row whose label
  *   contains "speaker" becomes a name row, any row whose label contains
  *   "testimon" becomes a testimony-meeting row (for fast Sundays — see
@@ -70,9 +74,9 @@
  *   two formats can even be mixed row to row. Either way, the number/
  *   name lands in the right-hand slot and the title is the centered
  *   line below it.
- * - getActiveSheet() reflects whichever tab an editor last had open in
- *   this spreadsheet, not a per-visitor selection — see the note in the
- *   chat reply about what that means with multiple weekly tabs.
+ * - Publish and Preview use whichever tab is open when you click them
+ *   (getActiveSheet()), not the newest week. Open the right week's tab
+ *   first.
  * - "Stake Business" and "Ward Business" (between "Invocation" and
  *   "Sacrament Hymn") are both optional, heading-only lines — like "The
  *   Sacrament" — that print no value of their own, they just switch on
@@ -90,7 +94,7 @@
  *   "speaker") get a searchable, type-ahead dropdown sourced from the
  *   "Songs" and "Members" sheet tabs — see 06_Dropdowns.gs for how it's
  *   built and refreshed. Typing something not on either list is still
- *   accepted (just flagged with a small warning triangle), so this never
+ *   accepted (just flagged with a small red triangle), so this never
  *   blocks a guest speaker or a hymn outside the hymnal. "Ward Bulletin >
  *   Update Songs" adds newly released Hymns for Home and Church hymns
  *   to the Songs tab from the Church's website — see 08_Songs.gs — and
@@ -118,8 +122,8 @@
  *    paste the token in. It's stored in this script's Properties, not in
  *    the visible code, so it stays out of anything you share or copy.
  * 5. "Ward Bulletin > Publish" (menu or sidebar) now renders whichever
- *    sheet tab is active and commits it as index.html in that repo. GitHub Pages
- *    usually picks up the change within a few seconds to a minute.
+ *    sheet tab is active and commits it as index.html in that repo.
+ *    GitHub Pages usually picks up the change within a minute.
  *
  * Each publish also archives the copy it's replacing to
  * GITHUB_ARCHIVE_DIR/<that bulletin's own Sunday>.html — the date read
@@ -136,7 +140,7 @@
 var WARD_NAME = 'Edgemont 21st Ward'; // shown in the header bar and page title
 
 
-// GitHub Pages destination — edit these three to match your repo.
+// GitHub Pages destination — edit these to match your repo.
 var GITHUB_OWNER = 'edgemont21ward';
 
 

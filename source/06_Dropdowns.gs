@@ -1,8 +1,56 @@
 /**
- * TYPE-AHEAD DROPDOWNS (Songs/Members/Leadership -> Person & Song fields)
- * Builds and refreshes the searchable dropdowns on Person/Song fields,
- * sourced from the Songs/Members/Leadership reference tabs, plus the
- * Date field's auto-fill-if-blank behavior.
+ * TYPE-AHEAD DROPDOWNS (Songs/Members/Leadership -> song and person fields)
+ * Builds and refreshes the searchable dropdowns on a week's tab, plus
+ * the Date field's fill-in-if-blank behavior.
+ *
+ * Which rows get which list (matched on the column-A label):
+ * - Songs tab: any label containing "hymn" or "music" ("Opening Hymn",
+ *   "Intermediate Hymn", "Musical Number", ...).
+ * - Members tab: any label containing "speaker", plus the exact labels
+ *   in PERSON_FIELD_LABELS_ ("Recognize Music Director", "Invocation",
+ *   ...). Those are checked before the "music" test, or "Recognize
+ *   Music Director" would be offered songs.
+ * - Leadership tab, by role:
+ *   - "Conducting": the Bishopric.
+ *   - "Presiding": the Bishopric and the Stake Presidency (a Stake
+ *     Presidency member presides whenever one is present).
+ *   - "Recognize Stake High Councilors and other Stake Leaders": the
+ *     High Council.
+ *   - "Presented By:" (under Stake Business): the Stake Presidency and
+ *     the High Council.
+ *   - "Stake Leaders Position:": the stake callings themselves, from
+ *     the Leadership tab's Role column.
+ *
+ * Start typing in any of these and Sheets filters the list. They're
+ * "Show a warning" rules (setAllowInvalid(true)), not "Reject input", so
+ * anything NOT on the list, like a guest speaker or a hymn outside the
+ * hymnal, is still accepted; it just gets a small red triangle in the
+ * cell's corner.
+ *
+ * Source data:
+ * - Songs: columns A/B/C = Hymnal / Number / Title, below a header row.
+ *   Offered as "#182 - We'll Sing All Hail to Jesus' Name", the way
+ *   songs are typed into column B.
+ * - Members: column A = "Last, First Middle", below a header row.
+ *   Offered as "First Middle Last", the way a speaker is printed.
+ * - Leadership: columns A/B = Role / Name, below a header row, one row
+ *   per person (as many "High Council Member" rows as needed). See
+ *   getLeadershipNames_.
+ *
+ * Why Songs and Members need a hidden helper column: Sheets' "List of
+ * items" rule (requireValueInList) caps at 500 entries, and the Songs
+ * tab is past that with all three books. "List from a range"
+ * (requireValueInRange) has no cap, but the choices have to live in
+ * real cells, so the formatted strings are written into a hidden
+ * column D on each of those two tabs and the rule points there. Column
+ * D is rewritten from A-C on every refresh, so editing it by hand is
+ * pointless. Leadership is small enough to use "List of items"
+ * directly.
+ *
+ * Because column D is a snapshot, not a formula, it's rebuilt every
+ * time the spreadsheet opens (see onOpenInstallable), from the menu's
+ * "Refresh Dropdowns", and by "Update Songs" and "Update Ward Members"
+ * after they change their tabs.
  */
 
 var DROPDOWN_HELPER_COL_ = 4; // column D on the Songs/Members sheets
@@ -34,10 +82,10 @@ var PERSON_FIELD_LABELS_ = [
 
 
 /**
- * Re-applies the Songs/Members dropdowns to every hymn/music and speaker
- * row on `sheet` (the active sheet, if omitted). Safe to call as often
- * as you like — it just overwrites whatever validation was already
- * there. A no-op on the Songs or Members tabs themselves, or on any
+ * Re-applies every dropdown described at the top of this file to
+ * `sheet` (the active sheet, if omitted). Safe to call as often as you
+ * like — it just overwrites whatever validation was already there. A
+ * no-op on the Songs, Members and Leadership tabs themselves, or on any
  * sheet with no matching rows.
  */
 function refreshDropdowns_(sheet) {
@@ -147,12 +195,13 @@ function refreshDropdownsFromMenu() {
   try {
     fillDefaultDate_(sheet);
   } catch (err) {
-    // Non-critical — see fillDefaultDate_'s own doc comment.
+    // Non-critical — the dropdowns below are what this menu item is
+    // for; a blank Date cell is easy to fill in by hand.
   }
   refreshDropdowns_(sheet);
   SpreadsheetApp.getUi().alert(
     'Dropdowns refreshed',
-    'Song and speaker dropdowns on "' + sheet.getName() + '" now match the Songs and Members sheets.',
+    'The dropdowns on "' + sheet.getName() + '" now match the Songs, Members and Leadership tabs.',
     SpreadsheetApp.getUi().ButtonSet.OK
   );
 }
@@ -332,27 +381,3 @@ function getLeadershipNames_(ss) {
     stakeRoles: stakeRoles
   };
 }
-
-/* ---------------------------------------------------------------------
- * NEW BULLETIN TABS, AND HIDING/SHOWING THE REFERENCE TABS
- *
- * "Create New Bulletin" duplicates a "Template" tab — a blank week's
- * program, laid out exactly like any other week's tab (same labels in
- * column A) but with the values in column B left empty — into a new
- * tab named after the closest upcoming Sunday, the same "September 20,
- * 2026" naming already used for week tabs (see nextSunday_ above for
- * the date it picks). You need to add that Template tab yourself, the
- * same way you added Songs/Members/Leadership — it's not something this
- * script can create on its own, since it doesn't know what your
- * program's layout should look like beyond the field labels it already
- * recognizes.
- *
- * The Template/Songs/Members/Leadership tabs are all reference data,
- * not something you read during the meeting, so "Show/Hide Reference
- * Tabs" lets you tuck them out of the way (Google Sheets' own
- * hideSheet()/showSheet(), the same "right-click a tab > Hide sheet"
- * you'd do by hand) without deleting anything — the script still reads
- * them normally either way, since hiding only affects what's visible in
- * the tab bar, not what Apps Script can see.
- * ------------------------------------------------------------------ */
-

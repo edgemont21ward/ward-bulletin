@@ -105,7 +105,7 @@
   <button id="publishBtn" onclick="doPublish()">Publish</button>
   <button id="previewBtn" class="secondary" onclick="doPreview()">Preview</button>
 
-  <div class="published" id="publishedInfo">
+  <div class="published">
     <div><a id="viewPublishedLink" href="<?= pagesUrl ?>" target="_blank"<? if (!lastPublishedSheet) { ?> style="display:none"<? } ?>>View published bulletin ↗</a></div>
     <? if (lastPublishedSheet) { ?>
     <div class="meta" id="lastPublishedTab"><span class="label">Tab:</span> <?= lastPublishedSheet ?></div>

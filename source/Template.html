@@ -6,10 +6,8 @@
 <title><?= data.wardName ?> Bulletin</title>
 <style>
   /*
-    Same visual design as ward-bulletin-template.html, rewritten to use
-    Apps Script scriptlet tags instead of [Bracket] placeholders so
-    renderBulletinHtml_() (03_Publish.gs) can render it directly from
-    the spreadsheet.
+    The bulletin's layout. renderBulletinHtml_() (03_Publish.gs) fills
+    it in from the spreadsheet through Apps Script's scriptlet tags.
   */
 
   :root {
@@ -96,13 +94,6 @@
   .bulletin-styledtext ul { margin: 4px 0; padding-left: 22px; }
   .bulletin-styledtext p { margin: 4px 0; }
   .bulletin-styledtext a { color: var(--accent); }
-
-  .bulletin-article-heading,
-  .bulletin-styledtext-heading {
-    font-weight: 700;
-    text-decoration-line: underline;
-    margin-top: 4px;
-  }
 
   .divider {
     height: 2px;

@@ -113,8 +113,8 @@ function getSacramentProgram_(data) {
       // Column B (and, in the two-cell format, column C) is usually
       // empty here (no one person is "assigned" to bear testimonies),
       // but resolved the same way as a music item in case it's ever
-      // used for a short note instead — see the "similar to Music"
-      // rendering in Template.html.
+      // used for a short note instead. Template.html prints it with the
+      // same layout as a music row.
       var parsedTestimony = resolveNumTitle_(value, titleCell, parseMusicItem_);
       items.push({
         type: 'testimony', label: label,
@@ -210,9 +210,9 @@ function parseHymn_(raw) {
  *     out.
  *   - Anything else (no recognized separator) → the whole string
  *     becomes { num: "", title: <whole string> }.
- * Only the first separator is used, so a title that itself contains a
- * hyphen (e.g. "Nearer, My God, to Thee - Ward Choir - a cappella")
- * still keeps "Ward Choir - a cappella" together as the title.
+ * Only the first separator is used, so a title that itself contains
+ * one stays whole: "Ward Choir - Nearer, My God, to Thee - arr. Wilberg"
+ * → { num: "Ward Choir", title: "Nearer, My God, to Thee - arr. Wilberg" }.
  */
 function parseMusicItem_(raw) {
   var str = String(raw == null ? '' : raw).trim();
@@ -406,68 +406,6 @@ function hasNewMembersOrBishopItems_(data) {
   }
   return false;
 }
-
-/* ---------------------------------------------------------------------
- * TYPE-AHEAD DROPDOWNS — every song row (any column-A label containing
- * "hymn" or "music" — "Opening Hymn", "Sacrament Hymn", "Intermediate
- * Hymn", "Musical Number", etc.) gets a searchable dropdown in column B
- * sourced from the Songs sheet, and every person row — any label
- * containing "speaker", plus the exact labels "Recognize Music
- * Director", "Recognize Organist", "Invocation", and "Benediction" (see
- * PERSON_FIELD_LABELS_ — those exact labels are checked before the
- * "music" substring test above, since otherwise "Recognize Music
- * Director" would match on "music" and get offered a song instead of a
- * name) — gets one sourced from the Members sheet. "Conducting" gets a
- * dropdown of just the Bishopric, "Presiding" gets one of the Bishopric
- * plus the Stake Presidency together (a Stake Presidency member
- * presides instead of the Bishop whenever one is present — see the note
- * next to Presiding in the sheet itself), and "Recognize Stake High
- * Councilors and other Stake Leaders" gets one of just the High
- * Council — all three sourced from a separate "Leadership" sheet.
- * Either way, start typing and Sheets
- * filters the list down to matches. It's built with "Show a warning"
- * validation (setAllowInvalid(true)), not "Reject input", so anything
- * NOT on the list — a guest speaker, a hymn not in the hymnal — is
- * still accepted; it just gets a small red corner marker instead of a
- * dropdown checkmark.
- *
- * Source data, and a hidden helper column:
- * - "Songs" sheet — columns A/B/C = Hymnal / Number-Page / Title (skips
- *   row 1, the header). Offered as "#182 - We'll Sing All Hail to
- *   Jesus' Name", matching how songs are already typed into column B
- *   today.
- * - "Members" sheet — column A = "Last, First Middle" (skips row 1, the
- *   header). Flipped to "First Middle Last" for the dropdown, since
- *   that's how a speaker's name actually gets printed in the bulletin.
- * - "Leadership" sheet — columns A/B = Role / Name (skips row 1, the
- *   header), e.g. "Bishop" / "Matt Smith", "Stake President" / "...",
- *   "High Council Member" / "..." (one row per person — add as many
- *   "High Council Member" rows as needed). Small enough (well under a
- *   few dozen rows even with several High Council rows) that, unlike
- *   Songs/Members, it can use "List of items" directly — see
- *   getLeadershipNames_.
- *
- * Sheets' "List of items" validation (requireValueInList) hard-caps at
- * 500 entries and errors otherwise — the Songs sheet alone is already
- * past that once the Children's Songbook is folded in with the two
- * hymnals. "List from a range" (requireValueInRange) has no such cap,
- * but it needs the display strings to actually live in real cells, not
- * just a computed array — so refreshDropdowns_ below writes them into a
- * hidden column D on each of the Songs/Members sheets (re-writing it
- * fresh every time, so it can never drift from column A/B/C) and points
- * the validation at that column. It's hidden because it's just a
- * computed mirror of columns A-C — there's nothing to edit there
- * directly (an edit would just be overwritten on the next refresh).
- *
- * Because that helper column is a snapshot taken at the moment it's
- * written (not a live formula), it's refreshed automatically every time
- * the spreadsheet is opened (see onOpenInstallable) and can also be
- * refreshed on demand from the "Ward Bulletin" menu — useful right
- * after adding a new speaker/hymn row, or after editing the Songs or
- * Members list, without having to reopen the sheet.
- * ------------------------------------------------------------------ */
-
-
 /**
  * Collects the announcement lines (as ready-to-print HTML — see
  * richTextCellToHtml_) from both the "ANNOUNCEMENTS" section and, if
@@ -522,17 +460,17 @@ function linkify_(escapedStr) {
  * returns a cell's DISPLAY text: if someone attaches a link via Sheets'
  * own "Insert link" (Ctrl+K), turning e.g. "Sign up here" blue and
  * underlined, getValues() just returns the plain words "Sign up here"
- * with no trace of the URL — so the old escapeHtml_ + linkify_ path
+ * with no trace of the URL — so the plain escapeHtml_ + linkify_ path
  * (which only recognizes a literal "https://..." typed into the cell)
- * silently drops that link and publishes plain, unclickable text.
+ * would silently drop that link and publish plain, unclickable text.
  *
  * getRichTextValues() (read alongside getValues() in buildBulletinData)
  * preserves that link. getRuns() splits a cell into same-formatting
  * spans, each with its own getLinkUrl(); a whole-cell link is just one
  * run covering the entire text. Any run WITH a link becomes an <a> tag
- * around its own text; any run withOUT one still goes through the old
+ * around its own text; any run withOUT one goes through the plain
  * escape + linkify_ path, so a bare "https://..." typed directly into
- * the text keeps working exactly as before.
+ * the text is still linked.
  */
 function richTextCellToHtml_(cellValue, richTextValue) {
   if (!richTextValue) {

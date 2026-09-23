@@ -6,6 +6,19 @@
  */
 
 
+/* ---------------------------------------------------------------------
+ * PUBLISH TRACKING
+ * Remembers which sheet tab was last published (and when), so the sidebar can link to what's actually live and highlight
+ * the Preview button whenever the active tab isn't a match for that
+ * anymore: either a different tab is active than the one last
+ * published, or it's the same tab but its content has changed since.
+ * Content is compared as a hash (not a raw edit timestamp) so an edit
+ * elsewhere in the sheet that doesn't actually change the rendered
+ * bulletin — a note in an unused cell, formatting, etc. — doesn't
+ * falsely flag it.
+ * ------------------------------------------------------------------ */
+
+
 /** MD5 hash of a string, base64-encoded — cheap way to compare rendered HTML for equality. */
 function hashContent_(str) {
   var digest = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, str, Utilities.Charset.UTF_8);
@@ -33,11 +46,10 @@ function getPagesUrl_() {
  * something is published: the copy being overwritten gets archived
  * under its own Sunday's date. It's read out of the rendered HTML
  * itself (the same date the bulletin prints), falling back to the tab
- * name, which is normally that same date anyway.
+ * name, which is normally that same date anyway, and then to today.
  *
- * Returns the human-readable timestamp so callers that already have
- * Document Properties open (like publishBulletinForSidebar()) don't
- * need to read it back.
+ * Returns the human-readable timestamp, which publishBulletinForSidebar()
+ * passes back to the sidebar.
  */
 function recordPublished_(sheet, html) {
   var props = PropertiesService.getDocumentProperties();
@@ -58,11 +70,10 @@ function recordPublished_(sheet, html) {
 
 
 /**
- * Sidebar-callable: {sheetName, publishedAt, pagesUrl} for whatever was
- * last published — sheetName and publishedAt are '' if nothing's been
- * published yet (pagesUrl is always the same fixed GitHub Pages URL,
- * published or not, so the sidebar can offer it once something exists
- * to look at there).
+ * {sheetName, publishedAt, pagesUrl} for whatever was last published,
+ * for the sidebar (via showToolbar and getPublishStatus). sheetName and
+ * publishedAt are '' if nothing's been published yet; pagesUrl is
+ * always the fixed GitHub Pages URL, published or not.
  */
 function getLastPublishedInfo_() {
   var props = PropertiesService.getDocumentProperties();
@@ -75,13 +86,12 @@ function getLastPublishedInfo_() {
 
 
 /**
- * Sidebar-callable: true if the active sheet tab isn't a match for
- * what's actually live on GitHub Pages — either it's a different tab
- * than the one last published, the same tab has been edited since, or
- * nothing has ever been published at all. Called once when the
- * sidebar first opens, and polled periodically while it stays open
- * (see Sidebar.html) so the highlight stays current even if you switch
- * tabs or keep editing without reopening the sidebar.
+ * True if the active sheet tab isn't a match for what's live on
+ * GitHub Pages: it's a different tab than the one last published, the
+ * same tab has been edited since, or nothing has been published yet.
+ * showToolbar calls it when the sidebar opens, and getPublishStatus
+ * calls it on every one of the sidebar's periodic checks, so the
+ * Preview highlight stays current as you switch tabs or keep editing.
  */
 function hasUnpublishedChanges() {
   var props = PropertiesService.getDocumentProperties();
@@ -391,6 +401,7 @@ function decodeGithubBase64_(content) {
 }
 
 
+/** The headers every GitHub Contents API request here sends. */
 function githubHeaders_(token) {
   return {
     'Authorization': 'Bearer ' + token,
@@ -398,8 +409,3 @@ function githubHeaders_(token) {
     'X-GitHub-Api-Version': '2022-11-28'
   };
 }
-
-/* ---------------------------------------------------------------------
- * DATA EXTRACTION
- * ------------------------------------------------------------------ */
-

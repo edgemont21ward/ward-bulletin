@@ -1,8 +1,19 @@
 /**
  * NEW BULLETIN TABS & REFERENCE TAB VISIBILITY
- * "Create New Bulletin" (duplicates the Template tab for the next Sunday)
- * and "Show/Hide Reference Tabs" (tucks Template/Songs/Members/
- * Leadership out of the tab bar, or brings them back).
+ *
+ * "Create New Bulletin" duplicates the Template tab (a blank week's
+ * program: the same labels in column A as any week's tab, with column
+ * B left empty) into a new tab named after the closest upcoming Sunday,
+ * in the "September 20, 2026" format the week tabs already use (see
+ * nextSunday_ in 06_Dropdowns.gs for how that Sunday is picked). The
+ * Template tab has to be made by hand, like Songs/Members/Leadership:
+ * the script only knows the field labels it reads, not the rest of your
+ * program's layout.
+ *
+ * "Show/Hide Reference Tabs" tucks the Template/Songs/Members/Leadership
+ * tabs out of the tab bar, or brings them back. That's Sheets' own
+ * hideSheet()/showSheet(), the same as right-click > Hide sheet, so
+ * nothing is deleted and the script reads hidden tabs normally.
  */
 
 /**
@@ -102,18 +113,15 @@ function createNewBulletin_() {
   ss.setActiveSheet(newSheet);
   ss.moveActiveSheet(1); // to the front, alongside the other week tabs
 
+  // Both non-critical: the tab exists either way, a blank Date cell is
+  // easy to fill in, and the dropdowns get another chance on the next
+  // open or from "Refresh Dropdowns".
   try {
     fillDefaultDate_(newSheet);
-  } catch (err) {
-    // Non-critical — see fillDefaultDate_'s own doc comment in
-    // 06_Dropdowns.gs.
-  }
+  } catch (err) {}
   try {
     refreshDropdowns_(newSheet);
-  } catch (err) {
-    // Non-critical — see refreshDropdowns_'s own doc comment in
-    // 06_Dropdowns.gs.
-  }
+  } catch (err) {}
 
   return newSheet;
 }

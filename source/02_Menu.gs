@@ -1,31 +1,15 @@
 /**
  * MENU & OPEN TRIGGERS
  * Builds the "Ward Bulletin" menu and gets the sidebar to auto-open.
- * NOTE ON FILE ORDER: Apps Script concatenates every file in a project
- * into one script before running it. Function declarations (like all of
- * these) are hoisted, so it never matters which file a function lives
- * in or which order the files load — any file can call any other file's
- * function. Only top-level `var ... = ...` values are order-sensitive
- * (see 01_Config.gs's note), which is why this project keeps them all
- * together in one file instead of scattering them.
  */
 
 /**
- * Adds the "Ward Bulletin" menu when the spreadsheet is opened, and
+ * Adds the "Ward Bulletin" menu when the spreadsheet is opened, then
  * (best-effort) makes sure the sidebar keeps auto-opening on future
- * opens too — see ensureAutoOpenTrigger_() below. Menu creation always
- * happens first and unconditionally, with nothing that could throw
- * ahead of it: a plain onOpen() simple trigger silently drops the
- * ENTIRE function — including the menu — if anything inside it throws
- * before .addToUi() runs, with no visible error (that's exactly how an
- * earlier version of this lost its menu entirely). Auto-open setup runs
- * only after, wrapped in its own try/catch, so it can never risk that
- * again. The menu's own "Publish" and "Preview" items match the
- * sidebar's buttons in both name and behavior — Preview calls
- * previewInModal() directly, and Publish goes through publishFromMenu()
- * (a thin wrapper around the same publishBulletinForSidebar() the
- * sidebar button calls) — so either one opens the exact same modal
- * dialog.
+ * opens — see ensureAutoOpenTrigger_() below. The menu is built first,
+ * and the trigger setup is wrapped in its own try/catch, because
+ * anything that throws in a simple onOpen() takes the menu down with
+ * it — see buildMenu_().
  */
 function onOpen() {
   buildMenu_();
@@ -66,12 +50,12 @@ function onOpen() {
  * onOpen() simple trigger silently drops the ENTIRE function —
  * including the menu — if anything inside it throws before .addToUi()
  * runs, with no visible error (that's exactly how an earlier version of
- * this lost its menu entirely). The menu's own "Publish" and "Preview"
- * items match the sidebar's buttons in both name and behavior —
- * Preview calls previewInModal() directly, and Publish goes through
- * publishFromMenu() (a thin wrapper around the same
- * publishBulletinForSidebar() the sidebar button calls) — so either one
- * opens the exact same modal dialog.
+ * this lost its menu entirely).
+ *
+ * The menu's "Publish" and "Preview" do exactly what the sidebar's
+ * buttons do: Preview calls previewInModal() directly, and Publish goes
+ * through publishFromMenu(), a thin wrapper around the sidebar's own
+ * publishBulletinForSidebar(). Either way the same dialog opens.
  */
 function buildMenu_() {
   var hidden = false;
@@ -162,7 +146,8 @@ function onOpenInstallable() {
   try {
     fillDefaultDate_();
   } catch (err) {
-    // Non-critical — see the try/catch below.
+    // Non-critical, like the dropdown refresh below: a blank Date cell
+    // is easy to fill in by hand.
   }
 
   try {
@@ -209,16 +194,3 @@ function showToolbar() {
   var html = tmpl.evaluate().setTitle('Ward Bulletin');
   SpreadsheetApp.getUi().showSidebar(html);
 }
-
-/* ---------------------------------------------------------------------
- * PUBLISH TRACKING — remembers which sheet tab was last published (and
- * when), so the sidebar can link to what's actually live and highlight
- * the Preview button whenever the active tab isn't a match for that
- * anymore: either a different tab is active than the one last
- * published, or it's the same tab but its content has changed since.
- * Content is compared as a hash (not a raw edit timestamp) so an edit
- * elsewhere in the sheet that doesn't actually change the rendered
- * bulletin — a note in an unused cell, formatting, etc. — doesn't
- * falsely flag it.
- * ------------------------------------------------------------------ */
-
