@@ -1,8 +1,7 @@
 /**
  * CONFIGURATION
- * Ward name, GitHub Pages destination, the deployed web app URL, and the
- * sheet/tab names every other file looks up by name (Songs, Members,
- * Leadership, Template). Loads first — SONGS_SHEET_NAME_ etc. must be
+ * Ward name, GitHub Pages destination, and the sheet/tab names every
+ * other file looks up by name (Songs, Members, Leadership, Template). Loads first — SONGS_SHEET_NAME_ etc. must be
  * defined before UTILITY_SHEET_NAMES_ below reads them, and Apps Script
  * runs each file's top-level `var` statements in the order the files
  * are listed in the editor's left-hand file list (drag to reorder there
@@ -25,25 +24,24 @@
  *    file — commit to main and the "Push to Apps Script" workflow runs
  *    clasp push, which creates all thirteen files (01_Config through
  *    09_Members, Template, Sidebar, MembersDialog, and the
- *    appsscript.json manifest) in one go. Setup for that, including the credentials it
- *    needs, is in source/README.md under "Automatic deploys". The
- *    numeric prefixes keep the script files in a sensible reading order
- *    in the editor's file list; see the note below on why 01_Config.gs
- *    specifically has to load before the others.
- * 4. Deploy > New deployment > select type "Web app".
- *    - Execute as: Me
- *    - Who has access: Anyone with the link (or "Anyone in [org]" if you
- *      want it restricted to BYU/ward accounts)
- *    - Click Deploy, authorize the requested permissions.
- * 5. Reload the spreadsheet. A "Ward Bulletin" menu appears, with a
+ *    appsscript.json manifest) in one go. Setup for that, including
+ *    the credentials it needs, is in source/README.md under "Automatic
+ *    deploys". The numeric prefixes keep the script files in a sensible
+ *    reading order in the editor's file list; see the note below on why
+ *    01_Config.gs specifically has to load before the others.
+ * 4. Reload the spreadsheet. A "Ward Bulletin" menu appears, with a
  *    sidebar of Publish/Preview buttons alongside it (use any menu item
  *    once to authorize this project, if prompted — that's also what
  *    lets the sidebar start auto-opening on future opens; see onOpen()
  *    in 02_Menu.gs). "Show Toolbar" reopens the sidebar any time you've
  *    closed it, and the individual menu items below it do the same thing
  *    the matching sidebar button does.
- * 6. Whenever you redeploy (Deploy > Manage deployments > edit > New
- *    version) after editing this code, the same URL keeps working.
+ *
+ * There's deliberately no web app deployment. Everything runs from the
+ * spreadsheet's own menu and sidebar, and the bulletin is served by
+ * GitHub Pages. A public web app would run as its owner and let anyone
+ * call this project's public functions — see the note at the top of
+ * 09_Members.gs — so don't add one back without a reason to.
  *
  * HOW IT FINDS DATA
  * Rather than hardcoded cell references (which would break as rows get
@@ -154,16 +152,6 @@ var GITHUB_FILE_PATH = 'index.html';
 var GITHUB_ARCHIVE_DIR = 'archive'; // where the previous index.html goes before each publish overwrites it
 
 
-// The web app's deployed URL, for the "Preview" menu item. Apps Script's
-// own ScriptApp.getService().getUrl() is unreliable when called from a
-// menu action (a known V8-runtime bug — it can return null or a stale
-// URL), so this is hardcoded instead. Copy it from Deploy > Manage
-// deployments in the Apps Script editor (it stays the same across "New
-// version" updates — only creating an entirely separate deployment
-// changes it).
-var WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbycG3HLZ1XNAm6W1n7EQ49V4t_rE6GJ_Ig_NbzuIGE3UydFo7D5o6IXy8PMVxoqJ8XP/exec';
-
-
 var SONGS_SHEET_NAME_ = 'Songs';
 
 
@@ -177,8 +165,3 @@ var TEMPLATE_SHEET_NAME_ = 'Template';
 
 
 var UTILITY_SHEET_NAMES_ = [TEMPLATE_SHEET_NAME_, SONGS_SHEET_NAME_, MEMBERS_SHEET_NAME_, LEADERSHIP_SHEET_NAME_];
-
-
-// clasp deploy test 10:54 — safe to delete
-
-// clasp deploy test 10:54 — safe to delete

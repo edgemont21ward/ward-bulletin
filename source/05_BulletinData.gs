@@ -4,7 +4,7 @@
  * for known labels and turns it into the plain data object Template.html
  * renders, including the HTML-escaping/link-detection helpers at the
  * bottom (escapeHtml_/linkify_/richTextCellToHtml_ — also called from
- * 04_Preview.gs for the "Open in a new tab" links).
+ * 04_Preview.gs for the preview and publish modals' links).
  */
 
 /**

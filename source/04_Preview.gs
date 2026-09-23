@@ -38,9 +38,9 @@ var MODAL_CSS_ =
   'iframe { flex:1 1 auto; width:100%; height:100%; border:0; display:block; }';
 
 
-/** The "Open in a new tab ↗" link both modals offer as a fallback. */
-function openInNewTabLink_(url) {
-  return '<a href="' + escapeHtml_(url) + '" target="_blank">Open in a new tab &#8599;</a>';
+/** A link out of either modal, opening in a new tab: "Open in a new tab ↗" unless `label` says otherwise. */
+function openInNewTabLink_(url, label) {
+  return '<a href="' + escapeHtml_(url) + '" target="_blank">' + escapeHtml_(label || 'Open in a new tab') + ' &#8599;</a>';
 }
 
 
@@ -48,9 +48,9 @@ function openInNewTabLink_(url) {
  * Opens `url` in a modal dialog: an iframe pointed straight at it, plus
  * a Refresh button and the "Open in a new tab" link (for the rare site
  * that refuses to be framed) instead of leaving the spreadsheet for a
- * separate tab. Used for the Publish result (GitHub Pages has no
- * framing restriction, unlike the web app URL — see
- * showInlinePreviewModal_ below for why Preview can't just do the same).
+ * separate tab. Used for the Publish result, since GitHub Pages lets
+ * itself be framed. Preview can't work this way: what it shows hasn't
+ * been published to any URL yet — see showInlinePreviewModal_ below.
  * Refresh reloads the iframe by changing its `src` (a real network
  * request, unlike the preview modal's server round-trip), so its
  * "Refreshing…" / "✓ Refreshed" feedback is driven by the iframe's own
@@ -96,21 +96,16 @@ function showResultModal_(url, title) {
 
 /**
  * Sidebar-callable: opens a preview of the active sheet tab in a modal.
- * This renders the bulletin HTML directly and feeds it to the iframe
- * via `srcdoc` instead of pointing the iframe's `src` at WEB_APP_URL —
- * script.google.com sets headers that refuse to let itself be framed
- * by another origin (a "script.google.com refused to connect" error),
- * so the deployed URL can never be embedded this way, only opened
- * directly. Rendering straight into the dialog sidesteps that entirely,
- * and as a bonus always reflects the sheet's current state even before
- * a new deployment is pushed. WEB_APP_URL is still offered as the
- * "Open in a new tab" link, since a normal top-level navigation to it
- * (as opposed to embedding it) works fine.
+ * The tab hasn't been published anywhere yet, so there's no URL to
+ * point the iframe at: the bulletin is rendered here and fed to the
+ * iframe through `srcdoc`, which also means it always shows the sheet
+ * exactly as it stands. The bar's link opens the bulletin that is
+ * currently published on GitHub Pages, for comparison.
  */
 function previewInModal() {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   var html = renderBulletinHtml_(sheet);
-  showInlinePreviewModal_(html, 'Bulletin Preview — ' + sheet.getName(), WEB_APP_URL);
+  showInlinePreviewModal_(html, 'Bulletin Preview — ' + sheet.getName(), getPagesUrl_(), 'Published bulletin');
 }
 
 
@@ -135,15 +130,15 @@ function renderPreviewHtml() {
  * dialog with the "Bulletin Publish" modal — so there's nothing left
  * for THIS dialog's success handler to do; a failure, like no GitHub
  * token being set, leaves this dialog open and shows the error here
- * instead), and (if `fallbackUrl` is given) an "Open in a new tab" link
- * for a full browser view. The initial content and every refresh both
+ * instead), and (if `linkUrl` is given) a link to it, labelled
+ * `linkLabel`, that opens in a new tab. The initial content and every refresh both
  * go through the iframe's `srcdoc` *property* (not an HTML attribute),
  * so there's no HTML-escaping to worry about — JSON.stringify is enough
  * to embed it safely as a JS string literal.
  */
-function showInlinePreviewModal_(html, title, fallbackUrl) {
+function showInlinePreviewModal_(html, title, linkUrl, linkLabel) {
   var jsHtml = JSON.stringify(html);
-  var openInNewTab = fallbackUrl ? openInNewTabLink_(fallbackUrl) : '';
+  var openInNewTab = linkUrl ? openInNewTabLink_(linkUrl, linkLabel) : '';
   var dialogHtml = HtmlService.createHtmlOutput(
     '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
     '<style>' + MODAL_CSS_ + '</style></head><body>' +

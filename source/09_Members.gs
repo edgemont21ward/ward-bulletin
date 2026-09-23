@@ -23,14 +23,16 @@
  * rebuilt from them.
  *
  * previewMemberUpdate and applyMemberUpdate are called from the dialog
- * through google.script.run, which means they're public — and this
- * project is also deployed as a web app anyone can open (doGet in
- * 03_Publish.gs), running as its owner. Any public function in the
- * deployed version can be called from that page's browser console, so
- * without a check a stranger could pass in a one-line list and read
- * the whole ward back as "removals", or apply it. Both therefore
- * require the one-time token that updateMembersFromMenu puts into the
- * dialog it opens, which only an editor clicking the menu ever gets.
+ * through google.script.run, which means they're public. Until
+ * September 2026 this project was also deployed as a web app anyone
+ * could open, running as its owner, and any public function in a web
+ * app's deployed version can be called from its page's browser
+ * console: a stranger could have passed in a one-line list and read
+ * the whole ward back as "removals", or applied it. That deployment is
+ * gone, but both functions still require the one-time token that
+ * updateMembersFromMenu puts into the dialog it opens (which only an
+ * editor clicking the menu ever gets), so a web app added back later
+ * can't reopen the hole.
  */
 
 // Header cells recognized for each column, compared lowercase. Anything
@@ -62,9 +64,9 @@ function updateMembersFromMenu() {
 
 /**
  * Throws unless `token` is one updateMembersFromMenu handed out in the
- * last six hours. That's what keeps previewMemberUpdate and
- * applyMemberUpdate out of reach of the public web app — see the note
- * at the top of this file.
+ * last six hours. That's what would keep previewMemberUpdate and
+ * applyMemberUpdate out of reach of a public web app, if one were ever
+ * deployed again — see the note at the top of this file.
  */
 function requireMembersDialog_(token) {
   if (!token || !CacheService.getScriptCache().get(MEMBERS_DIALOG_TOKEN_KEY_ + token)) {

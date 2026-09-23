@@ -11,9 +11,9 @@ bulletin was for.
 
 | File | What's in it |
 | --- | --- |
-| `01_Config.gs` | Ward name, GitHub destinations, web app URL, sheet/tab names. Full setup instructions are in the comment at the top. |
+| `01_Config.gs` | Ward name, GitHub destinations, sheet/tab names. Full setup instructions are in the comment at the top. |
 | `02_Menu.gs` | The "Ward Bulletin" menu, the on-open triggers, and the sidebar. |
-| `03_Publish.gs` | Serving the web app, publishing to GitHub Pages, and archiving the previous bulletin. |
+| `03_Publish.gs` | Publishing to GitHub Pages, and archiving the previous bulletin. |
 | `04_Preview.gs` | The Preview and Publish result dialogs. |
 | `05_BulletinData.gs` | Reads the sheet and turns it into the data the template renders. |
 | `06_Dropdowns.gs` | Type-ahead dropdowns for songs, speakers and leadership, plus the Date auto-fill. |
@@ -23,7 +23,7 @@ bulletin was for.
 | `Template.html` | The bulletin itself — layout and styling. |
 | `Sidebar.html` | The Publish/Preview sidebar. |
 | `MembersDialog.html` | The Update Ward Members dialog: choose the PDF (read in the browser with pdf.js) or paste, review, apply. |
-| `appsscript.json` | The project manifest — timezone, V8 runtime, and the web app's execute-as/access settings. Apps Script hides this by default; see "Editing in the browser" below. |
+| `appsscript.json` | The project manifest — timezone, V8 runtime, and error logging. Apps Script hides this by default; see "Editing in the browser" below. |
 
 This README is the only file here that isn't part of the script —
 `../.claspignore` keeps it out of the push.
@@ -45,17 +45,12 @@ workflow (`../.github/workflows/push-to-apps-script.yml`) runs `clasp push
 --force`, which replaces the editor's contents with this folder's. Reload
 the spreadsheet afterwards to pick up menu or sidebar changes.
 
-Two things that push does *not* do:
+A push doesn't touch Script Properties. The GitHub token that
+`03_Publish.gs` publishes with lives there, set by hand, and survives
+every push.
 
-- **It doesn't redeploy the web app.** The deployed version keeps serving
-  the code it was cut from, so a change to `doGet` or `Template.html`
-  won't show up at the web app URL until you go to Deploy > Manage
-  deployments > edit > New version. (There's a commented-out
-  `clasp update-deployment` step in the workflow if you'd rather automate
-  it — it needs the deployment ID as a `CLASP_DEPLOYMENT_ID` secret.)
-- **It doesn't touch Script Properties.** The GitHub token that
-  `03_Publish.gs` publishes with lives there, set by hand, and survives
-  every push.
+There's no web app deployment, on purpose: see the note under SETUP in
+`01_Config.gs`.
 
 ### Editing in the browser
 
@@ -66,8 +61,8 @@ into this folder and commit it.
 
 `appsscript.json` is hidden in the editor until you turn it on: Project
 Settings > "Show 'appsscript.json' manifest file in editor". The workflow
-fails early if that file is missing here, since pushing without a manifest
-would strip the project's web app settings.
+fails early if that file is missing here, since clasp can't push without
+it.
 
 ## Automatic deploys
 

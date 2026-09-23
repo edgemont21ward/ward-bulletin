@@ -61,8 +61,3 @@ jobs:
       # is currently in the Apps Script editor with what's in source/.
       - name: Push to Apps Script
         run: clasp push --force
-
-      # Updating code does not update the deployed web app. Uncomment and set
-      # the secret to your deployment ID if you ever want that.
-      # - name: Redeploy the web app
-      #   run: clasp update-deployment ${{ secrets.CLASP_DEPLOYMENT_ID }}

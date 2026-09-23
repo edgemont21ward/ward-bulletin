@@ -8,8 +8,8 @@
   /*
     Same visual design as ward-bulletin-template.html, rewritten to use
     Apps Script scriptlet tags instead of [Bracket] placeholders so
-    Code.gs's doGet() can render it directly from the spreadsheet.
-    See Code.gs for the dot-leader / grid explanation.
+    renderBulletinHtml_() (03_Publish.gs) can render it directly from
+    the spreadsheet.
   */
 
   :root {
@@ -221,7 +221,7 @@
       // Any number of speakers, hymns/musical numbers, and testimony
       // rows (for a fast Sunday), in whatever order they appear in the
       // sheet between "Sacrament Hymn" and "Benediction" — see
-      // getSacramentProgram_ in Code.gs.
+      // getSacramentProgram_ in 05_BulletinData.gs.
       for (var spi = 0; spi < data.sacramentProgram.length; spi++) {
         var progItem = data.sacramentProgram[spi];
         if (progItem.type === 'speaker') {

@@ -1,22 +1,9 @@
 /**
- * PUBLISHING (web app + GitHub Pages)
+ * PUBLISHING (GitHub Pages)
  * Everything involved in getting the active sheet tab's bulletin out into
- * the world: doGet() serves it at the deployed web app URL, and the
- * publishToGithub_()/archive functions commit it to GitHub Pages.
+ * the world: publishToGithub_() and the archive functions commit it to
+ * GitHub Pages.
  */
-
-/** Serves the rendered bulletin at the web app's URL. */
-function doGet(e) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  var data = buildBulletinData(sheet);
-  data.wardName = WARD_NAME;
-
-  var tmpl = HtmlService.createTemplateFromFile('Template');
-  tmpl.data = data;
-  return tmpl.evaluate()
-    .setTitle(WARD_NAME + ' Bulletin')
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
-}
 
 
 /** MD5 hash of a string, base64-encoded — cheap way to compare rendered HTML for equality. */
@@ -198,7 +185,7 @@ function promptForGithubToken() {
  * ------------------------------------------------------------------ */
 
 
-/** Renders the given sheet tab to a raw HTML string (no web app wrapper). */
+/** Renders the given sheet tab to the bulletin's complete HTML page, as a string. */
 function renderBulletinHtml_(sheet) {
   var data = buildBulletinData(sheet);
   data.wardName = WARD_NAME;
