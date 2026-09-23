@@ -83,8 +83,10 @@
  *   a value in column B on any of those sub-rows — see
  *   hasStakeBusinessContent_. "Ward Business" has no row of its own at
  *   all; it prints whenever anyone is actually listed under the
- *   "Releases"/"Sustaining" section's NAMES table — see
- *   hasReleasesOrSustainingNames_. Leave the section empty and the
+ *   "Releases"/"Sustaining" section's NAMES table (see
+ *   hasReleasesOrSustainingNames_), or anything is entered for new
+ *   member records or the Bishop's items above it (see
+ *   hasNewMembersOrBishopItems_). Leave the section empty and the
  *   matching heading is skipped.
  * - Song and speaker cells (any label containing "hymn"/"music", or
  *   "speaker") get a searchable, type-ahead dropdown sourced from the

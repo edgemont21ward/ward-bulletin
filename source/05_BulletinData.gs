@@ -52,10 +52,10 @@ function buildBulletinData(sheet) {
 
     // Both optional, heading-only lines (like "The Sacrament") — neither
     // prints a value of its own, they just switch on and off. See
-    // hasStakeBusinessContent_ / hasReleasesOrSustainingNames_ for what
-    // each is actually gated on.
+    // hasStakeBusinessContent_, and hasReleasesOrSustainingNames_ /
+    // hasNewMembersOrBishopItems_, for what each is actually gated on.
     hasStakeBusiness: hasStakeBusinessContent_(data),
-    hasWardBusiness: hasReleasesOrSustainingNames_(data),
+    hasWardBusiness: hasReleasesOrSustainingNames_(data) || hasNewMembersOrBishopItems_(data),
 
     sacramentHymnNum: sacrament.num,
     sacramentHymnTitle: sacrament.title,
@@ -332,8 +332,9 @@ function hasStakeBusinessContent_(data) {
 
 /**
  * True if anyone is actually listed as being released or sustained —
- * this is what "Ward Business" is gated on, since there's no "Ward
- * Business" row in the sheet at all. "Releases" and "Sustaining" sit
+ * one of the two things "Ward Business" is gated on (the other is
+ * hasNewMembersOrBishopItems_), since there's no "Ward Business" row in
+ * the sheet at all. "Releases" and "Sustaining" sit
  * side by side as a single wide section header, with a shared block of
  * boilerplate script text below it, then a "NAMES:" / "POSITIONS:"
  * label row, then the actual entries: a released person's name in
@@ -358,6 +359,50 @@ function hasReleasesOrSustainingNames_(data) {
 
     blankStreak++;
     if (blankStreak >= 2) break; // two blank rows = end of the table
+  }
+  return false;
+}
+
+
+/**
+ * True if anything has been entered for the rest of Ward Business: new
+ * member records to be read, or any of the Bishop's items (First
+ * Presidency letters, Primary advancements or baptisms, Young Women, a
+ * baby blessing, or anything under "Bishop Smith:"). Any one of those
+ * means time goes to the Bishop for Ward Business even when nobody is
+ * being released or sustained.
+ *
+ * They all sit in one block, from the "New Member Records to be read:"
+ * label down to the "Releases" / "Sustaining" header, with labels in
+ * column A and entries typed into columns B-D. The block is found by
+ * those two ends rather than by the item labels, because the item
+ * labels carry the Bishop's name and will change whenever the bishop
+ * does.
+ *
+ * Two cells inside the block are script rather than entries, and are
+ * always filled in: "Please join me in welcoming these new members..."
+ * and "[IF ANY of the following events, say, ...]". They're told apart
+ * by how they open — a quote mark for words to be read aloud, a square
+ * bracket for a stage direction, the convention the whole sheet
+ * follows — so a cell starting with either is skipped. A name or an
+ * item typed as plain text always counts.
+ */
+function hasNewMembersOrBishopItems_(data) {
+  var startIdx = -1;
+  for (var i = 0; i < data.length; i++) {
+    if (normalizeLabel_(data[i][0]).indexOf('new member records') !== -1) {
+      startIdx = i;
+      break;
+    }
+  }
+  var endIdx = findLabelIndex_(data, 'Releases');
+  if (startIdx === -1 || endIdx <= startIdx) return false;
+
+  for (var r = startIdx; r < endIdx; r++) {
+    for (var c = 1; c <= 3; c++) { // columns B-D
+      var v = String(data[r][c] == null ? '' : data[r][c]).trim();
+      if (v && !/^["\u201C\[]/.test(v)) return true;
+    }
   }
   return false;
 }
