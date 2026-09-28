@@ -471,7 +471,7 @@ function copyDropdownFromSimilarRow_(sheet, newRow, kind) {
 
 /* ---------------------------------------------------------------------
  * ARCHIVING PAST WEEKS
- * "Ward Bulletin > Archive Past Weeks…" moves every week tab older than
+ * "Ward Bulletin > Tools > Archive Past Weeks…" moves every week tab older than
  * this week's into a brand-new spreadsheet, then removes them here, so
  * this one only holds the week being worked on (and any later ones),
  * Template, and the reference tabs.

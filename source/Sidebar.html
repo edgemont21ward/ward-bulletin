@@ -305,8 +305,8 @@ function friendlyError_(err) {
   var msg = (err && err.message) || String(err);
   if (/authorization is required/i.test(msg)) {
     return 'This account hasn\'t authorized this tool yet. Use any ' +
-      '"Ward Bulletin" menu item once (Publish, Preview, or Show ' +
-      'Toolbar) — it\'ll prompt you to grant access — then try again.';
+      '"Ward Bulletin" menu item once (Preview, Publish, or Open ' +
+      'Sidebar) — it\'ll prompt you to grant access — then try again.';
   }
   return msg;
 }

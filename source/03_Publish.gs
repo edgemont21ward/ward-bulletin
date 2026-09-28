@@ -138,7 +138,7 @@ function getPublishStatus() {
 function publishBulletinForSidebar() {
   var token = PropertiesService.getScriptProperties().getProperty('GITHUB_TOKEN');
   if (!token) {
-    throw new Error('No GitHub token set yet. Use "Ward Bulletin > Set GitHub Token…" first.');
+    throw new Error('No GitHub token set yet. Use "Ward Bulletin > Tools > Set GitHub Token…" first.');
   }
 
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();

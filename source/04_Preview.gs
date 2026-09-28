@@ -164,7 +164,7 @@ function showInlinePreviewModal_(html, title, linkUrl, linkLabel) {
     '  if (/authorization is required/i.test(msg)) {' +
     '    return \'This account hasn\\\'t authorized this tool yet. ' +
            'Close this and use any "Ward Bulletin" menu item once ' +
-           '(Publish, Preview, or Show Toolbar) to grant access, ' +
+           '(Preview, Publish, or Open Sidebar) to grant access, ' +
            'then try again.\';' +
     '  }' +
     '  return msg;' +

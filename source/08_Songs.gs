@@ -1,6 +1,6 @@
 /**
  * SONGS TAB UPDATES
- * "Ward Bulletin > Update Songs" checks the Church's own table of
+ * "Ward Bulletin > Tools > Update Songs" checks the Church's own table of
  * contents for Hymns for Home and Church and adds any hymn the Songs
  * tab doesn't have yet, so a newly released batch shows up in the song
  * dropdowns without anyone typing it in.

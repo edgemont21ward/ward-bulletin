@@ -38,10 +38,11 @@
  *    sidebar alongside it for publishing, adding program rows and
  *    opening the reports (use any menu item once to authorize this
  *    project, if prompted — that's also what lets the sidebar start
- *    auto-opening on future opens; see onOpen() in 02_Menu.gs). "Show
- *    Toolbar" reopens the sidebar any time you've closed it, and the
- *    individual menu items below it do the same thing the matching
- *    sidebar button does.
+ *    auto-opening on future opens; see onOpen() in 02_Menu.gs). "Open
+ *    Sidebar" reopens the sidebar any time you've closed it, and the
+ *    menu's Preview, Publish, Add Program Row and Reports do the same
+ *    thing as the matching sidebar buttons. Everything used only now
+ *    and then is under the menu's Tools.
  *
  * The one web app deployment is the ARCHIVE SERVICE, which lets any
  * editor's "Archive Past Weeks…" create the archive as this
@@ -106,12 +107,12 @@
  *   built and refreshed. Typing something not on either list is still
  *   accepted (just flagged with a small red triangle), so this never
  *   blocks a guest speaker or a hymn outside the hymnal. "Ward Bulletin >
- *   Update Songs" adds newly released Hymns for Home and Church hymns
- *   to the Songs tab from the Church's website — see 08_Songs.gs — and
- *   "Update Ward Members" syncs the Members tab to LCR's Member List
- *   PDF, or the list pasted in — see 09_Members.gs.
- * - "Ward Bulletin > Create New Bulletin" duplicates a "Template" tab
- *   into a new tab for the closest upcoming Sunday — see
+ *   Tools > Update Songs" adds newly released Hymns for Home and Church
+ *   hymns to the Songs tab from the Church's website — see 08_Songs.gs —
+ *   and "Update Ward Members…" syncs the Members tab to LCR's Member
+ *   List PDF, or the list pasted in — see 09_Members.gs.
+ * - "Ward Bulletin > Tools > Create New Bulletin" duplicates a
+ *   "Template" tab into a new tab for the closest upcoming Sunday — see
  *   07_BulletinTabs.gs. You need to add that Template tab yourself (a
  *   blank week's program, laid out like any other week's tab).
  *   "Show/Hide Reference Tabs" tucks the Template/Songs/Members/
@@ -135,8 +136,8 @@
  *    (shown once).
  * 3. Edit GITHUB_OWNER / GITHUB_REPO / GITHUB_BRANCH / GITHUB_FILE_PATH
  *    below to match your repo.
- * 4. Reload the spreadsheet, use "Ward Bulletin > Set GitHub Token…" and
- *    paste the token in. It's stored in this script's Properties, not in
+ * 4. Reload the spreadsheet, use "Ward Bulletin > Tools > Set GitHub
+ *    Token…" and paste the token in. It's stored in this script's Properties, not in
  *    the visible code, so it stays out of anything you share or copy.
  * 5. "Ward Bulletin > Publish" (menu or sidebar) now renders whichever
  *    sheet tab is active and commits it as index.html in that repo.

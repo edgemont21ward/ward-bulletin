@@ -1,6 +1,6 @@
 /**
  * WARD MEMBERS UPDATES
- * "Ward Bulletin > Update Ward Members" brings the Members tab in line
+ * "Ward Bulletin > Tools > Update Ward Members…" brings the Members tab in line
  * with the ward's current member list from LCR. Membership data sits
  * behind a Church account sign-in, so the script never fetches it
  * itself: whoever runs this exports the Member List from LCR (a PDF),
@@ -70,7 +70,7 @@ function updateMembersFromMenu() {
  */
 function requireMembersDialog_(token) {
   if (!token || !CacheService.getScriptCache().get(MEMBERS_DIALOG_TOKEN_KEY_ + token)) {
-    throw new Error('This dialog has expired. Close it and open Ward Bulletin > Update Ward Members again.');
+    throw new Error('This dialog has expired. Close it and open Ward Bulletin > Tools > Update Ward Members… again.');
   }
 }
 

@@ -27,22 +27,20 @@ function onOpen() {
 
 
 /**
- * Builds (or rebuilds) the "Ward Bulletin" menu. Called from onOpen()
- * itself, and again — with nothing else in between — from
- * hideUtilityTabsFromMenu()/showUtilityTabsFromMenu() right after they
- * change the reference tabs' visibility, so the menu's Show/Hide
- * Reference Tabs item flips to the other one immediately, without
- * waiting for the spreadsheet to be reopened (calling createMenu() +
- * addToUi() again for the same menu name replaces it in place — Sheets
- * doesn't need a page reload to pick that up).
+ * Builds (or rebuilds) the "Ward Bulletin" menu: the weekly items on
+ * top (Open Sidebar, Preview, Publish, Add Program Row, Reports), and
+ * everything used only now and then under Tools. The weekly ones do
+ * exactly what the matching sidebar buttons do.
  *
- * Only one of "➕ Show Reference Tabs" / "➖ Hide Reference Tabs" is
- * ever added, chosen by areUtilityTabsHidden_() — so exactly one, never
- * both, appears in the menu at a time.
+ * It's rebuilt, with nothing else in between, by hideUtilityTabsFromMenu()
+ * and showUtilityTabsFromMenu() right after they change the reference
+ * tabs' visibility, so Tools offers "Show Reference Tabs" or "Hide
+ * Reference Tabs" (only ever one of them, chosen by
+ * areUtilityTabsHidden_()) to match. Calling createMenu() + addToUi()
+ * again for the same menu name replaces it in place, no reload needed.
  *
- * Google Sheets' custom menu API is text-only — there's no way to
- * attach a real icon image to a menu item — so an emoji prefix on each
- * label is the closest practical stand-in for one.
+ * Menus are text-only, with no way to attach an icon, so each item gets
+ * an emoji instead: a different one each, so no two look alike.
  *
  * Building the menu always happens first and unconditionally, with
  * nothing that could throw ahead of it (areUtilityTabsHidden_() is
@@ -51,11 +49,6 @@ function onOpen() {
  * including the menu — if anything inside it throws before .addToUi()
  * runs, with no visible error (that's exactly how an earlier version of
  * this lost its menu entirely).
- *
- * The menu's "Publish" and "Preview" do exactly what the sidebar's
- * buttons do: Preview calls previewInModal() directly, and Publish goes
- * through publishFromMenu(), a thin wrapper around the sidebar's own
- * publishBulletinForSidebar(). Either way the same dialog opens.
  */
 function buildMenu_() {
   var hidden = false;
@@ -69,42 +62,37 @@ function buildMenu_() {
   }
 
   var ui = SpreadsheetApp.getUi();
-  var reportsMenu = ui.createMenu('📊 Reports')
-    .addItem('Speakers', 'showSpeakersReport')
-    .addItem('Prayers', 'showPrayersReport');
-
   var addRowMenu = ui.createMenu('➕ Add Program Row')
     .addItem('Speaker', 'addSpeakerRowFromMenu')
     .addItem('Intermediate Hymn', 'addHymnRowFromMenu')
     .addItem('Musical Number', 'addMusicalNumberRowFromMenu')
     .addItem('Testimonies', 'addTestimoniesRowFromMenu');
 
-  var menu = ui
-    .createMenu('Ward Bulletin')
-    .addItem('🧰 Show Toolbar', 'showToolbar')
-    .addSeparator()
-    .addItem('📤 Publish', 'publishFromMenu')
-    .addItem('👁️ Preview', 'previewInModal')
+  var reportsMenu = ui.createMenu('📊 Reports')
+    .addItem('Speakers', 'showSpeakersReport')
+    .addItem('Prayers', 'showPrayersReport');
+
+  var toolsMenu = ui.createMenu('🛠️ Tools')
+    .addItem('🎵 Update Songs', 'updateSongsFromMenu')
+    .addItem('👥 Update Ward Members…', 'updateMembersFromMenu')
+    .addItem('🔄 Refresh Dropdowns', 'refreshDropdownsFromMenu')
     .addSeparator()
     .addItem('🆕 Create New Bulletin', 'createNewBulletinFromMenu')
+    .addItem(hidden ? '🗂️ Show Reference Tabs' : '🗂️ Hide Reference Tabs',
+      hidden ? 'showUtilityTabsFromMenu' : 'hideUtilityTabsFromMenu')
+    .addItem('🗄️ Archive Past Weeks…', 'archivePastWeeksFromMenu')
+    .addSeparator()
+    .addItem('🔑 Set GitHub Token…', 'promptForGithubToken');
+
+  ui.createMenu('Ward Bulletin')
+    .addItem('🧰 Open Sidebar', 'showToolbar')
+    .addSeparator()
+    .addItem('👁️ Preview', 'previewInModal')
+    .addItem('📤 Publish', 'publishFromMenu')
     .addSubMenu(addRowMenu)
-    .addItem('🔄 Refresh Dropdowns', 'refreshDropdownsFromMenu')
-    .addItem('🎵 Update Songs', 'updateSongsFromMenu')
-    .addItem('👥 Update Ward Members', 'updateMembersFromMenu')
-    .addSeparator()
     .addSubMenu(reportsMenu)
-    .addSeparator();
-
-  if (hidden) {
-    menu.addItem('➕ Show Reference Tabs', 'showUtilityTabsFromMenu');
-  } else {
-    menu.addItem('➖ Hide Reference Tabs', 'hideUtilityTabsFromMenu');
-  }
-  menu.addItem('🗄️ Archive Past Weeks…', 'archivePastWeeksFromMenu');
-
-  menu
     .addSeparator()
-    .addItem('🔑 Set GitHub Token…', 'promptForGithubToken')
+    .addSubMenu(toolsMenu)
     .addToUi();
 }
 
@@ -155,8 +143,8 @@ function onOpenInstallable() {
   } catch (err) {
     // Non-critical — the usual cause is simply not having added a
     // "Template" tab yet, which shouldn't produce an error dialog every
-    // single time the file is opened. "Ward Bulletin > Create New
-    // Bulletin" reports the real reason when it's used deliberately.
+    // single time the file is opened. "Ward Bulletin > Tools > Create
+    // New Bulletin" reports the real reason when it's used deliberately.
   }
 
   try {
@@ -170,15 +158,15 @@ function onOpenInstallable() {
     refreshDropdowns_();
   } catch (err) {
     // Non-critical — a validation hiccup (e.g. a missing Songs/Members
-    // sheet) shouldn't affect anything else this trigger does. "Refresh
-    // Dropdowns" in the menu can be used to retry once fixed.
+    // sheet) shouldn't affect anything else this trigger does. "Tools >
+    // Refresh Dropdowns" in the menu can be used to retry once fixed.
   }
 }
 
 
 /**
- * Menu action (and the installable trigger's target above): opens the
- * sidebar (Sidebar.html): the status card, Preview and Publish, the
+ * "Open Sidebar" in the menu, and the installable trigger's target
+ * above: opens the sidebar (Sidebar.html): the status card, Preview and Publish, the
  * Add to the program buttons, and the Reports buttons. The publish
  * status (getPublishStatus in 03_Publish.gs) is built into the page so
  * the status card is right the moment it opens, with no round trip.
