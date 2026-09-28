@@ -1,5 +1,6 @@
 /**
- * NEW BULLETIN TABS & REFERENCE TAB VISIBILITY
+ * NEW BULLETIN TABS, PROGRAM ROWS & REFERENCE TAB VISIBILITY
+ * (Program rows have their own section further down.)
  *
  * "Create New Bulletin" duplicates the Template tab (a blank week's
  * program: the same labels in column A as any week's tab, with column
@@ -191,3 +192,159 @@ function showUtilityTabsFromMenu() {
     : 'None of the Template/Songs/Members/Leadership tabs were found.');
 }
 
+
+
+/* ---------------------------------------------------------------------
+ * PROGRAM ROWS
+ * "Add Program Row" (menu) and the sidebar's "+ Speaker" /
+ * "+ Intermediate Hymn" / "+ Musical Number" buttons insert a row into
+ * the sacrament program, just below whichever row is selected. Google Sheets doesn't let a
+ * script add to its right-click menu, so this is the nearest thing.
+ *
+ * Adding a row by hand means retyping the label (easy to misspell, and
+ * it prints on the bulletin exactly as typed), re-merging columns B-D,
+ * and reapplying the dropdown. Doing it here copies all three from the
+ * rows around it.
+ * ------------------------------------------------------------------ */
+
+
+// The labels these add, by the name the sidebar and menu use for each.
+// Any label containing "speaker", "hymn" or "music" already prints as a
+// program item (see getSacramentProgram_), so these are just the
+// spellings to standardize on.
+var PROGRAM_ROW_LABELS_ = {
+  speaker: 'Speaker',
+  hymn: 'Intermediate Hymn',
+  music: 'Musical Number'
+};
+
+
+/** Menu actions for the "Add Program Row" submenu. */
+function addSpeakerRowFromMenu() { addProgramRowFromMenu_('speaker'); }
+function addHymnRowFromMenu() { addProgramRowFromMenu_('hymn'); }
+function addMusicalNumberRowFromMenu() { addProgramRowFromMenu_('music'); }
+
+
+function addProgramRowFromMenu_(kind) {
+  try {
+    var added = insertProgramRow_(kind);
+    SpreadsheetApp.getActiveSpreadsheet().toast(
+      'Added a ' + added.label + ' row at row ' + added.row + '.', 'Ward Bulletin', 4);
+  } catch (err) {
+    SpreadsheetApp.getUi().alert('Could not add a row', err.message || String(err),
+      SpreadsheetApp.getUi().ButtonSet.OK);
+  }
+}
+
+
+/**
+ * Sidebar-callable: the same insert, for the sidebar's buttons. Returns
+ * {row, label} for its status line, or throws a message it can show.
+ */
+function addProgramRowForSidebar(kind) {
+  return insertProgramRow_(kind);
+}
+
+
+/**
+ * Inserts a `kind` row ('speaker', 'hymn' or 'music') just below the
+ * selected row of the active tab, and moves the cursor to its column B
+ * ready to type. The selected row has to be inside the sacrament
+ * program: below "Sacrament Hymn" and above "Benediction" (see
+ * sacramentProgramBounds_). Selecting "The Administration of the
+ * Sacrament" line adds the row at the top of the program.
+ *
+ * The new row copies its formatting and merged cells from the nearest
+ * existing program row (the selected one, if it is one), so it matches
+ * its neighbours. Its dropdown is copied from another row of the same
+ * kind; failing that, refreshDropdowns_ applies it.
+ *
+ * Returns { row: the new row's 1-based number, label }.
+ */
+function insertProgramRow_(kind) {
+  var label = PROGRAM_ROW_LABELS_[kind];
+  if (!label) throw new Error('Unknown kind of program row: ' + kind);
+
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var data = sheet.getDataRange().getValues();
+  var bounds = sacramentProgramBounds_(data);
+  if (!bounds) {
+    throw new Error('"' + sheet.getName() + '" has no sacrament program to add to — it needs a ' +
+      '"Sacrament Hymn" row with a "Benediction" row somewhere below it.');
+  }
+
+  var selected = sheet.getActiveRange().getLastRow(); // 1-based; the bottom row if several are selected
+  var selectedIdx = selected - 1;
+  if (selectedIdx <= bounds.start || selectedIdx >= bounds.end) {
+    throw new Error('Select a row between "Sacrament Hymn" (row ' + (bounds.start + 1) + ') and ' +
+      '"Benediction" (row ' + (bounds.end + 1) + ') first. The new row goes just below the one you select.');
+  }
+
+  var styleRow = nearestProgramItemRow_(data, bounds, selectedIdx);
+  var newRow = selected + 1;
+  sheet.insertRowAfter(selected);
+  var width = sheet.getLastColumn();
+
+  if (styleRow !== null) {
+    var src = styleRow < newRow ? styleRow : styleRow + 1; // rows below the insert moved down one
+    var srcRange = sheet.getRange(src, 1, 1, width);
+    srcRange.copyFormatToRange(sheet, 1, width, newRow, newRow);
+    srcRange.getMergedRanges().forEach(function (m) {
+      if (m.getNumRows() === 1) sheet.getRange(newRow, m.getColumn(), 1, m.getNumColumns()).merge();
+    });
+  }
+
+  sheet.getRange(newRow, 1).setValue(label);
+  if (!copyDropdownFromSimilarRow_(sheet, newRow, kind)) {
+    refreshDropdowns_(sheet);
+  }
+  sheet.getRange(newRow, 2).activate();
+  return { row: newRow, label: label };
+}
+
+
+/**
+ * The 1-based row of the program item (a speaker, hymn/music, or
+ * testimony row) nearest to `selectedIdx`, preferring the selected row
+ * itself, then the rows below it, then above. That's the row whose look
+ * a new row copies. Null if the program has no items yet — the new row
+ * then keeps whatever formatting Sheets gave it.
+ */
+function nearestProgramItemRow_(data, bounds, selectedIdx) {
+  var isItem = function (i) {
+    var l = normalizeLabel_(data[i][0]);
+    return /speaker|hymn|music|testimon/.test(l);
+  };
+  if (isItem(selectedIdx)) return selectedIdx + 1;
+  for (var d = 1; d < bounds.end - bounds.start; d++) {
+    if (selectedIdx + d < bounds.end && isItem(selectedIdx + d)) return selectedIdx + d + 1;
+    if (selectedIdx - d > bounds.start && isItem(selectedIdx - d)) return selectedIdx - d + 1;
+  }
+  return null;
+}
+
+
+/**
+ * Gives the new row's column B the same dropdown as another row of the
+ * same kind on this tab: another speaker row for 'speaker', another
+ * song row for 'hymn' or 'music' (both use the Songs list). True if it
+ * found one to copy. Much faster than refreshDropdowns_, which rebuilds
+ * the Songs and Members helper columns.
+ */
+function copyDropdownFromSimilarRow_(sheet, newRow, kind) {
+  var data = sheet.getDataRange().getValues();
+  for (var i = 0; i < data.length; i++) {
+    if (i === newRow - 1) continue;
+    var l = normalizeLabel_(data[i][0]);
+    var sameKind = kind === 'speaker'
+      ? l.indexOf('speaker') !== -1
+      : (l.indexOf('hymn') !== -1 || l.indexOf('music') !== -1) && PERSON_FIELD_LABELS_.indexOf(l) === -1;
+    if (!sameKind) continue;
+    var rule = sheet.getRange(i + 1, 2).getDataValidation();
+    if (rule) {
+      sheet.getRange(newRow, 2).setDataValidation(rule);
+      return true;
+    }
+  }
+  return false;
+}

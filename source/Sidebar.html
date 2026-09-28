@@ -32,6 +32,26 @@
     opacity: 0.6;
     cursor: default;
   }
+  .add-rows {
+    margin: 4px 0 14px;
+  }
+  .add-rows .label {
+    color: #666;
+    font-size: 12px;
+    margin-bottom: 6px;
+  }
+  .add-rows .buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .add-rows button {
+    display: inline-block;
+    width: auto;
+    margin: 0;
+    padding: 6px 10px;
+    font-size: 12px;
+  }
   button.secondary.highlight {
     background: #fff3cd;
     color: #7a5b00;
@@ -104,6 +124,15 @@
 
   <button id="publishBtn" onclick="doPublish()">Publish</button>
   <button id="previewBtn" class="secondary" onclick="doPreview()">Preview</button>
+
+  <div class="add-rows">
+    <div class="label">Add to the program, below the selected row:</div>
+    <div class="buttons">
+      <button class="secondary" onclick="addRow('speaker', this)">+ Speaker</button>
+      <button class="secondary" onclick="addRow('hymn', this)">+ Intermediate Hymn</button>
+      <button class="secondary" onclick="addRow('music', this)">+ Musical Number</button>
+    </div>
+  </div>
 
   <div class="published">
     <div><a id="viewPublishedLink" href="<?= pagesUrl ?>" target="_blank"<? if (!lastPublishedSheet) { ?> style="display:none"<? } ?>>View published bulletin ↗</a></div>
@@ -258,6 +287,23 @@ function doPublish() {
       setStatus(friendlyError_(err), true);
     })
     .publishBulletinForSidebar();
+}
+
+/** Inserts a program row below the selected row — see insertProgramRow_ in 07_BulletinTabs.gs. */
+function addRow(kind, btn) {
+  btn.disabled = true;
+  setStatus('Adding a row…');
+
+  google.script.run
+    .withSuccessHandler(function (added) {
+      btn.disabled = false;
+      setTransientStatus('✓ Added a ' + escapeHtmlClient_(added.label) + ' row at row ' + added.row + '.');
+    })
+    .withFailureHandler(function (err) {
+      btn.disabled = false;
+      setStatus(escapeHtmlClient_(friendlyError_(err)), true);
+    })
+    .addProgramRowForSidebar(kind);
 }
 
 function doPreview() {

@@ -90,16 +90,11 @@ function buildBulletinData(sheet) {
  * — is skipped.
  */
 function getSacramentProgram_(data) {
-  var startIdx = -1, endIdx = -1;
-  for (var i = 0; i < data.length; i++) {
-    var norm = normalizeLabel_(data[i][0]);
-    if (startIdx === -1 && norm === 'sacrament hymn') startIdx = i;
-    if (norm === 'benediction') { endIdx = i; break; }
-  }
-  if (startIdx === -1 || endIdx === -1 || endIdx <= startIdx) return [];
+  var bounds = sacramentProgramBounds_(data);
+  if (!bounds) return [];
 
   var items = [];
-  for (var r = startIdx + 1; r < endIdx; r++) {
+  for (var r = bounds.start + 1; r < bounds.end; r++) {
     var label = String(data[r][0] == null ? '' : data[r][0]).trim();
     if (!label) continue; // blank spacer row, or a value-less header cell
 
@@ -131,6 +126,28 @@ function getSacramentProgram_(data) {
     // header-only line, not a speaker, testimony, or hymn row — skipped.
   }
   return items;
+}
+
+
+/**
+ * The sacrament program's boundaries in `data`, as 0-based row indexes:
+ * { start: the "Sacrament Hymn" row, end: the "Benediction" row }, with
+ * the program itself being the rows strictly between the two. Null if
+ * either row is missing or they're out of order. Shared by
+ * getSacramentProgram_, which prints those rows, and insertProgramRow_
+ * (07_BulletinTabs.gs), which adds to them, so the two always agree on
+ * where the program is.
+ */
+function sacramentProgramBounds_(data) {
+  var start = -1;
+  for (var i = 0; i < data.length; i++) {
+    var norm = normalizeLabel_(data[i][0]);
+    if (start === -1 && norm === 'sacrament hymn') start = i;
+    if (norm === 'benediction') {
+      return start !== -1 && i > start ? { start: start, end: i } : null;
+    }
+  }
+  return null;
 }
 
 

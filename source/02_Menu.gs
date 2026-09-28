@@ -68,7 +68,13 @@ function buildMenu_() {
     // the doc comment above.
   }
 
-  var menu = SpreadsheetApp.getUi()
+  var ui = SpreadsheetApp.getUi();
+  var addRowMenu = ui.createMenu('➕ Add Program Row')
+    .addItem('Speaker', 'addSpeakerRowFromMenu')
+    .addItem('Intermediate Hymn', 'addHymnRowFromMenu')
+    .addItem('Musical Number', 'addMusicalNumberRowFromMenu');
+
+  var menu = ui
     .createMenu('Ward Bulletin')
     .addItem('🧰 Show Toolbar', 'showToolbar')
     .addSeparator()
@@ -76,6 +82,7 @@ function buildMenu_() {
     .addItem('👁️ Preview', 'previewInModal')
     .addSeparator()
     .addItem('🆕 Create New Bulletin', 'createNewBulletinFromMenu')
+    .addSubMenu(addRowMenu)
     .addItem('🔄 Refresh Dropdowns', 'refreshDropdownsFromMenu')
     .addItem('🎵 Update Songs', 'updateSongsFromMenu')
     .addItem('👥 Update Ward Members', 'updateMembersFromMenu')
