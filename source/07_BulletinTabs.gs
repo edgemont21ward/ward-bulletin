@@ -453,11 +453,16 @@ function copyDropdownFromSimilarRow_(sheet, newRow, kind) {
  *
  * It's careful about the removing: nothing is deleted until every tab
  * has been copied and each copy checked cell for cell against its
- * original. The new spreadsheet lands in the Drive of whoever runs it.
- * Putting it next to this one instead would need the full Drive
- * permission, and a new permission makes every editor re-authorize,
- * during which their open trigger (the sidebar, and creating each
- * week's tab) silently stops.
+ * original.
+ *
+ * The archive has to end up in the Drive of the account that owns this
+ * spreadsheet. A new spreadsheet always belongs to, and lands in the
+ * Drive of, whoever creates it — no permission changes that — so this
+ * only works when run from that account, and it checks: if the new
+ * archive's owner isn't this spreadsheet's owner, it stops before
+ * copying or removing anything (see archivePastWeeks_). Run from the
+ * owner's account, the archive lands at the top of that My Drive, which
+ * is also where this spreadsheet is.
  * ------------------------------------------------------------------ */
 
 
@@ -475,9 +480,11 @@ function archivePastWeeksFromMenu() {
     return;
   }
 
+  var owner = ownerEmail_(ss);
   var answer = ui.alert(
     'Archive ' + names.length + ' past ' + (names.length === 1 ? 'week' : 'weeks') + '?',
-    'These tabs will be copied into a new spreadsheet in your Google Drive, then removed from this one:\n\n' +
+    'These tabs will be copied into a new spreadsheet in the Google Drive of ' +
+      (owner || 'the account that owns this spreadsheet') + ', then removed from this one:\n\n' +
       names.join('\n') + '\n\n' +
       thisWeek + ', any later weeks, Template, and the reference tabs stay here.',
     ui.ButtonSet.YES_NO);
@@ -495,7 +502,7 @@ function archivePastWeeksFromMenu() {
     '<div style="font-family:Arial,sans-serif;font-size:13px;line-height:1.5">' +
     '<p>Archived ' + result.tabs.length + (result.tabs.length === 1 ? ' tab' : ' tabs') + ' to ' +
     '<a href="' + escapeHtml_(result.url) + '" target="_blank">' + escapeHtml_(result.name) + ' &#8599;</a>, ' +
-    'in your Google Drive.</p>' +
+    'in the Google Drive of ' + escapeHtml_(result.owner) + ', which owns this spreadsheet.</p>' +
     '<p style="color:#5f6368">' + escapeHtml_(result.tabs.join(', ')) + '</p>' +
     '</div>'
   ).setWidth(460).setHeight(200);
@@ -531,7 +538,17 @@ function pastWeekTabs_(ss) {
  *
  * If any copy doesn't match its original, nothing is deleted here and
  * the error names the half-made archive, so it can be checked or thrown
- * away. Returns { url, name, tabs } for the new spreadsheet.
+ * away.
+ *
+ * Refuses unless it's being run by this spreadsheet's owner, since the
+ * new spreadsheet belongs to (and lands in the Drive of) whoever runs
+ * this — see the section note. That's checked straight after creating
+ * the archive, the one point where the runner's identity is known
+ * without asking for another permission: the new file's owner is the
+ * runner. On a mismatch the still-empty spreadsheet is renamed so it's
+ * obviously safe to delete, and nothing else happens.
+ *
+ * Returns { url, name, tabs, owner } for the new spreadsheet.
  */
 function archivePastWeeks_(names) {
   return withBulletinTabLock_(function () {
@@ -546,6 +563,15 @@ function archivePastWeeks_(names) {
       (byDate.length > 1 ? ' to ' + byDate[byDate.length - 1] : '') + ')';
 
     var archive = SpreadsheetApp.create(title);
+    var owner = ownerEmail_(ss);
+    var runner = ownerEmail_(archive); // a new spreadsheet is owned by whoever created it
+    if (!owner || owner !== runner) {
+      archive.rename('Unused archive — safe to delete');
+      throw new Error('Archive Past Weeks has to be run from ' + (owner || 'the account that owns this spreadsheet') +
+        ', which owns this spreadsheet, so the archive goes into that account\'s Google Drive. Nothing was ' +
+        'archived or removed. It did leave an empty spreadsheet called "Unused archive — safe to delete" in ' +
+        (runner ? 'the Drive of ' + runner : 'your Google Drive') + '; you can delete it.');
+    }
     archive.setSpreadsheetTimeZone(ss.getSpreadsheetTimeZone());
     var placeholder = archive.getSheets()[0]; // every new spreadsheet starts with a "Sheet1"
 
@@ -570,8 +596,15 @@ function archivePastWeeks_(names) {
     if (current) ss.setActiveSheet(current);
     pairs.forEach(function (p) { ss.deleteSheet(p.tab); });
 
-    return { url: archive.getUrl(), name: archive.getName(), tabs: tabs.map(function (s) { return s.getName(); }) };
+    return { url: archive.getUrl(), name: archive.getName(), tabs: tabs.map(function (s) { return s.getName(); }), owner: owner };
   });
+}
+
+
+/** The email of the account that owns `spreadsheet`, or '' if Sheets won't say. */
+function ownerEmail_(spreadsheet) {
+  var owner = spreadsheet.getOwner();
+  return owner ? String(owner.getEmail() || '').toLowerCase() : '';
 }
 
 
