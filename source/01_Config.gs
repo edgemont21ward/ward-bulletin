@@ -109,7 +109,9 @@
  *   blank week's program, laid out like any other week's tab).
  *   "Show/Hide Reference Tabs" tucks the Template/Songs/Members/
  *   Leadership tabs out of the tab bar without affecting anything this
- *   script reads from them.
+ *   script reads from them. "Archive Past Weeks…" moves the week tabs
+ *   older than this week into a new spreadsheet, after checking each
+ *   copy — see 07_BulletinTabs.gs.
  *
  * PUBLISHING TO GITHUB PAGES (one-time setup)
  * 1. Create a public GitHub repo (e.g. "ward-bulletin"), and in its

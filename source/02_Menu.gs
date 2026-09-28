@@ -94,6 +94,7 @@ function buildMenu_() {
   } else {
     menu.addItem('➖ Hide Reference Tabs', 'hideUtilityTabsFromMenu');
   }
+  menu.addItem('🗄️ Archive Past Weeks…', 'archivePastWeeksFromMenu');
 
   menu
     .addSeparator()

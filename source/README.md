@@ -17,7 +17,7 @@ bulletin was for.
 | `04_Preview.gs` | The Preview and Publish result dialogs. |
 | `05_BulletinData.gs` | Reads the sheet and turns it into the data the template renders. |
 | `06_Dropdowns.gs` | Type-ahead dropdowns for songs, speakers and leadership, plus the Date auto-fill. |
-| `07_BulletinTabs.gs` | Creating each week's tab, adding speaker, song and testimony rows to its program, and showing/hiding the reference tabs. |
+| `07_BulletinTabs.gs` | Creating each week's tab, adding speaker, song and testimony rows to its program, showing/hiding the reference tabs, and archiving past weeks to a new spreadsheet. |
 | `08_Songs.gs` | "Update Songs": adds newly released Hymns for Home and Church hymns to the Songs tab, from the Church's website. |
 | `09_Members.gs` | "Update Ward Members": syncs the Members tab to LCR's Member List (its PDF export, or the list pasted in), after a review of every change. |
 | `Template.html` | The bulletin itself — layout and styling. |

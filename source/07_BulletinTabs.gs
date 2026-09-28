@@ -1,6 +1,6 @@
 /**
- * NEW BULLETIN TABS, PROGRAM ROWS & REFERENCE TAB VISIBILITY
- * (Program rows have their own section further down.)
+ * NEW BULLETIN TABS, PROGRAM ROWS, REFERENCE TAB VISIBILITY & ARCHIVING
+ * (Program rows and archiving have their own sections further down.)
  *
  * "Create New Bulletin" duplicates the Template tab (a blank week's
  * program: the same labels in column A as any week's tab, with column
@@ -435,4 +435,147 @@ function copyDropdownFromSimilarRow_(sheet, newRow, kind) {
     }
   }
   return false;
+}
+
+
+/* ---------------------------------------------------------------------
+ * ARCHIVING PAST WEEKS
+ * "Ward Bulletin > Archive Past Weeks…" moves every week tab older than
+ * this week's into a brand-new spreadsheet, then removes them here, so
+ * this one only holds the week being worked on (and any later ones),
+ * Template, and the reference tabs.
+ *
+ * A "week tab" is one named exactly like a date, the way week tabs are
+ * named ("September 20, 2026"); anything else is never touched. "Older
+ * than this week" means before the closest upcoming Sunday, the same
+ * Sunday bulletinTabName_ names: on a Sunday that's today, so that
+ * day's tab stays until Monday.
+ *
+ * It's careful about the removing: nothing is deleted until every tab
+ * has been copied and each copy checked cell for cell against its
+ * original. The new spreadsheet lands in the Drive of whoever runs it.
+ * Putting it next to this one instead would need the full Drive
+ * permission, and a new permission makes every editor re-authorize,
+ * during which their open trigger (the sidebar, and creating each
+ * week's tab) silently stops.
+ * ------------------------------------------------------------------ */
+
+
+var WEEK_TAB_NAME_ = /^(January|February|March|April|May|June|July|August|September|October|November|December) \d{1,2}, \d{4}$/;
+
+
+/** Menu action: confirms which tabs will go, archives them, and links to the result. */
+function archivePastWeeksFromMenu() {
+  var ui = SpreadsheetApp.getUi();
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var thisWeek = bulletinTabName_(ss);
+  var names = pastWeekTabs_(ss).map(function (s) { return s.getName(); });
+  if (!names.length) {
+    ui.alert('Nothing to archive', 'There are no week tabs older than ' + thisWeek + '.', ui.ButtonSet.OK);
+    return;
+  }
+
+  var answer = ui.alert(
+    'Archive ' + names.length + ' past ' + (names.length === 1 ? 'week' : 'weeks') + '?',
+    'These tabs will be copied into a new spreadsheet in your Google Drive, then removed from this one:\n\n' +
+      names.join('\n') + '\n\n' +
+      thisWeek + ', any later weeks, Template, and the reference tabs stay here.',
+    ui.ButtonSet.YES_NO);
+  if (answer !== ui.Button.YES) return;
+
+  var result;
+  try {
+    result = archivePastWeeks_(names);
+  } catch (err) {
+    ui.alert('Archive failed', err.message || String(err), ui.ButtonSet.OK);
+    return;
+  }
+
+  var html = HtmlService.createHtmlOutput(
+    '<div style="font-family:Arial,sans-serif;font-size:13px;line-height:1.5">' +
+    '<p>Archived ' + result.tabs.length + (result.tabs.length === 1 ? ' tab' : ' tabs') + ' to ' +
+    '<a href="' + escapeHtml_(result.url) + '" target="_blank">' + escapeHtml_(result.name) + ' &#8599;</a>, ' +
+    'in your Google Drive.</p>' +
+    '<p style="color:#5f6368">' + escapeHtml_(result.tabs.join(', ')) + '</p>' +
+    '</div>'
+  ).setWidth(460).setHeight(200);
+  ui.showModalDialog(html, 'Past weeks archived');
+}
+
+
+/**
+ * The week tabs dated before this week's Sunday (see the section note),
+ * in the order they sit in the tab bar.
+ */
+function pastWeekTabs_(ss) {
+  var thisWeek = parseBulletinDateText_(bulletinTabName_(ss)); // "yyyy-MM-dd", so strings compare as dates
+  return ss.getSheets().filter(function (sheet) {
+    var name = sheet.getName();
+    if (!WEEK_TAB_NAME_.test(name)) return false;
+    var date = parseBulletinDateText_(name);
+    return date !== '' && date < thisWeek;
+  });
+}
+
+
+/**
+ * Copies the past week tabs named in `names` into a new spreadsheet,
+ * checks each copy against its original, and only then deletes the
+ * originals. Only tabs that were confirmed AND are still past weeks
+ * are touched, so if the date rolls over while the confirmation is
+ * open, this week's tab isn't swept up with them.
+ *
+ * In the copies, the dropdown rules are removed: they point at the
+ * Songs and Members tabs, which the archive doesn't have. Values,
+ * formatting, merges and links are kept.
+ *
+ * If any copy doesn't match its original, nothing is deleted here and
+ * the error names the half-made archive, so it can be checked or thrown
+ * away. Returns { url, name, tabs } for the new spreadsheet.
+ */
+function archivePastWeeks_(names) {
+  return withBulletinTabLock_(function () {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var tabs = pastWeekTabs_(ss).filter(function (s) { return names.indexOf(s.getName()) !== -1; });
+    if (!tabs.length) throw new Error('None of those tabs are here to archive any more.');
+
+    var byDate = tabs.map(function (s) { return s.getName(); }).sort(function (a, b) {
+      return parseBulletinDateText_(a) < parseBulletinDateText_(b) ? -1 : 1;
+    });
+    var title = ss.getName() + ' — Archive (' + byDate[0] +
+      (byDate.length > 1 ? ' to ' + byDate[byDate.length - 1] : '') + ')';
+
+    var archive = SpreadsheetApp.create(title);
+    archive.setSpreadsheetTimeZone(ss.getSpreadsheetTimeZone());
+    var placeholder = archive.getSheets()[0]; // every new spreadsheet starts with a "Sheet1"
+
+    var pairs = tabs.map(function (tab) {
+      var copy = tab.copyTo(archive);
+      copy.setName(tab.getName());
+      if (copy.isSheetHidden()) copy.showSheet();
+      copy.getRange(1, 1, copy.getMaxRows(), copy.getMaxColumns()).clearDataValidations();
+      return { tab: tab, copy: copy };
+    });
+    archive.deleteSheet(placeholder);
+
+    var mismatched = pairs.filter(function (p) { return !sameSheetValues_(p.tab, p.copy); });
+    if (mismatched.length) {
+      throw new Error('The archive copy of ' + mismatched.map(function (p) { return p.tab.getName(); }).join(', ') +
+        ' didn\'t match the original, so no tabs were removed from this spreadsheet. The copies made so far ' +
+        'are in "' + archive.getName() + '" in your Google Drive: ' + archive.getUrl());
+    }
+
+    // Deleting the tab you're looking at leaves Sheets to pick another one; pick this week's instead.
+    var current = ss.getSheetByName(bulletinTabName_(ss));
+    if (current) ss.setActiveSheet(current);
+    pairs.forEach(function (p) { ss.deleteSheet(p.tab); });
+
+    return { url: archive.getUrl(), name: archive.getName(), tabs: tabs.map(function (s) { return s.getName(); }) };
+  });
+}
+
+
+/** True if two sheets hold exactly the same values in the same cells. */
+function sameSheetValues_(a, b) {
+  return JSON.stringify(a.getDataRange().getValues()) === JSON.stringify(b.getDataRange().getValues());
 }
