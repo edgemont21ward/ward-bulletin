@@ -184,4 +184,4 @@ var UTILITY_SHEET_NAMES_ = [TEMPLATE_SHEET_NAME_, SONGS_SHEET_NAME_, MEMBERS_SHE
 // 07_BulletinTabs.gs). Empty until it's deployed; "Archive Past Weeks…"
 // says so rather than failing. The GitHub workflow reads the deployment
 // ID out of this line to keep that deployment on the latest code.
-var ARCHIVE_SERVICE_URL = '';
+var ARCHIVE_SERVICE_URL = 'https://script.google.com/macros/s/AKfycbykTGBYhLvECz3-hHusUlvkEYa6kEHDeYaXz1z2tMVoYlpvaiDhWBwZ9ZfYSFDRke97/exec';
