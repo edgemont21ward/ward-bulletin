@@ -65,8 +65,8 @@
  *   many of each appear in the sheet. Anything else in that range (like
  *   the "The Administration of the Sacrament" header line) is skipped.
  *   "Ward Bulletin > Add Program Row", or the sidebar's "+" buttons,
- *   adds a speaker or song row with its label, merged cells and
- *   dropdown already set — see 07_BulletinTabs.gs.
+ *   adds a speaker, song or testimonies row with its label, merged
+ *   cells and dropdown already set — see 07_BulletinTabs.gs.
  * - A hymn/music/testimony row's number and title can be entered either
  *   of two ways (see resolveNumTitle_) — combined in column B, split on
  *   its first "-"/"–"/"—"/"|" (e.g. "#1062 - Lord, Accept Our Humble

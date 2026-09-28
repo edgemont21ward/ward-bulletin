@@ -276,8 +276,9 @@ function showUtilityTabsFromMenu() {
 /* ---------------------------------------------------------------------
  * PROGRAM ROWS
  * "Add Program Row" (menu) and the sidebar's "+ Speaker" /
- * "+ Intermediate Hymn" / "+ Musical Number" buttons insert a row into
- * the sacrament program, just below whichever row is selected. Google Sheets doesn't let a
+ * "+ Intermediate Hymn" / "+ Musical Number" / "+ Testimonies" buttons
+ * insert a row into the sacrament program, just below whichever row is
+ * selected. Google Sheets doesn't let a
  * script add to its right-click menu, so this is the nearest thing.
  *
  * Adding a row by hand means retyping the label (easy to misspell, and
@@ -288,13 +289,15 @@ function showUtilityTabsFromMenu() {
 
 
 // The labels these add, by the name the sidebar and menu use for each.
-// Any label containing "speaker", "hymn" or "music" already prints as a
-// program item (see getSacramentProgram_), so these are just the
-// spellings to standardize on.
+// Any label containing "speaker", "hymn", "music" or "testimon" already
+// prints as a program item (see getSacramentProgram_), so these are
+// just the spellings to standardize on. "Testimonies" is what the
+// September 6 fast Sunday used.
 var PROGRAM_ROW_LABELS_ = {
   speaker: 'Speaker',
   hymn: 'Intermediate Hymn',
-  music: 'Musical Number'
+  music: 'Musical Number',
+  testimony: 'Testimonies'
 };
 
 
@@ -302,6 +305,7 @@ var PROGRAM_ROW_LABELS_ = {
 function addSpeakerRowFromMenu() { addProgramRowFromMenu_('speaker'); }
 function addHymnRowFromMenu() { addProgramRowFromMenu_('hymn'); }
 function addMusicalNumberRowFromMenu() { addProgramRowFromMenu_('music'); }
+function addTestimoniesRowFromMenu() { addProgramRowFromMenu_('testimony'); }
 
 
 function addProgramRowFromMenu_(kind) {
@@ -326,9 +330,9 @@ function addProgramRowForSidebar(kind) {
 
 
 /**
- * Inserts a `kind` row ('speaker', 'hymn' or 'music') just below the
- * selected row of the active tab, and moves the cursor to its column B
- * ready to type. The selected row has to be inside the sacrament
+ * Inserts a `kind` row ('speaker', 'hymn', 'music' or 'testimony')
+ * just below the selected row of the active tab, and moves the cursor
+ * to its column B ready to type. The selected row has to be inside the sacrament
  * program: below "Sacrament Hymn" and above "Benediction" (see
  * sacramentProgramBounds_). Selecting "The Administration of the
  * Sacrament" line adds the row at the top of the program.
@@ -336,7 +340,9 @@ function addProgramRowForSidebar(kind) {
  * The new row copies its formatting and merged cells from the nearest
  * existing program row (the selected one, if it is one), so it matches
  * its neighbours. Its dropdown is copied from another row of the same
- * kind; failing that, refreshDropdowns_ applies it.
+ * kind; failing that, refreshDropdowns_ applies it. A testimonies row
+ * gets no dropdown: nobody is assigned to it, so column B is usually
+ * left blank, as on any fast Sunday tab.
  *
  * Returns { row: the new row's 1-based number, label }.
  */
@@ -374,7 +380,9 @@ function insertProgramRow_(kind) {
   }
 
   sheet.getRange(newRow, 1).setValue(label);
-  if (!copyDropdownFromSimilarRow_(sheet, newRow, kind)) {
+  if (kind === 'testimony') {
+    sheet.getRange(newRow, 2).clearDataValidations(); // in case copying the format brought one along
+  } else if (!copyDropdownFromSimilarRow_(sheet, newRow, kind)) {
     refreshDropdowns_(sheet);
   }
   sheet.getRange(newRow, 2).activate();
@@ -406,7 +414,8 @@ function nearestProgramItemRow_(data, bounds, selectedIdx) {
 /**
  * Gives the new row's column B the same dropdown as another row of the
  * same kind on this tab: another speaker row for 'speaker', another
- * song row for 'hymn' or 'music' (both use the Songs list). True if it
+ * song row for 'hymn' or 'music' (both use the Songs list). Not used for
+ * 'testimony', which has no dropdown. True if it
  * found one to copy. Much faster than refreshDropdowns_, which rebuilds
  * the Songs and Members helper columns.
  */

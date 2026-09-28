@@ -72,7 +72,8 @@ function buildMenu_() {
   var addRowMenu = ui.createMenu('➕ Add Program Row')
     .addItem('Speaker', 'addSpeakerRowFromMenu')
     .addItem('Intermediate Hymn', 'addHymnRowFromMenu')
-    .addItem('Musical Number', 'addMusicalNumberRowFromMenu');
+    .addItem('Musical Number', 'addMusicalNumberRowFromMenu')
+    .addItem('Testimonies', 'addTestimoniesRowFromMenu');
 
   var menu = ui
     .createMenu('Ward Bulletin')
