@@ -105,11 +105,11 @@ function getSacramentProgram_(data) {
     if (normLabel.indexOf('speaker') !== -1) {
       items.push({ type: 'speaker', label: label, name: value });
     } else if (normLabel.indexOf('testimon') !== -1) {
-      // Column B (and, in the two-cell format, column C) is usually
-      // empty here (no one person is "assigned" to bear testimonies),
-      // but resolved the same way as a music item in case it's ever
-      // used for a short note instead. Template.html prints it with the
-      // same layout as a music row.
+      // Resolved the same way as a music item: column B (usually "Ward
+      // Members") prints on the right, and column C ("Sharing of
+      // Testimonies") as the line below — see layOutTestimonyRow_ in
+      // 07_BulletinTabs.gs. Template.html prints it with the same
+      // layout as a music row.
       var parsedTestimony = resolveNumTitle_(value, titleCell, parseMusicItem_);
       items.push({
         type: 'testimony', label: label,

@@ -303,6 +303,12 @@ var PROGRAM_ROW_LABELS_ = {
   testimony: 'Testimonies'
 };
 
+// What a new testimonies row is filled in with, as on September 6: who
+// in column B, and in columns C-D the line printed under it, the way a
+// hymn's title is.
+var TESTIMONY_ROW_WHO_ = 'Ward Members';
+var TESTIMONY_ROW_TITLE_ = 'Sharing of Testimonies';
+
 
 /** Menu actions for the "Add Program Row" submenu. */
 function addSpeakerRowFromMenu() { addProgramRowFromMenu_('speaker'); }
@@ -344,8 +350,7 @@ function addProgramRowForSidebar(kind) {
  * existing program row (the selected one, if it is one), so it matches
  * its neighbours. Its dropdown is copied from another row of the same
  * kind; failing that, refreshDropdowns_ applies it. A testimonies row
- * gets no dropdown: nobody is assigned to it, so column B is usually
- * left blank, as on any fast Sunday tab.
+ * is laid out like September 6's instead — see layOutTestimonyRow_.
  *
  * Returns { row: the new row's 1-based number, label }.
  */
@@ -368,7 +373,7 @@ function insertProgramRow_(kind) {
       '"Benediction" (row ' + (bounds.end + 1) + ') first. The new row goes just below the one you select.');
   }
 
-  var styleRow = nearestProgramItemRow_(data, bounds, selectedIdx);
+  var styleRow = nearestProgramItemRow_(data, bounds, selectedIdx, kind);
   var newRow = selected + 1;
   sheet.insertRowAfter(selected);
   var width = sheet.getLastColumn();
@@ -384,7 +389,7 @@ function insertProgramRow_(kind) {
 
   sheet.getRange(newRow, 1).setValue(label);
   if (kind === 'testimony') {
-    sheet.getRange(newRow, 2).clearDataValidations(); // in case copying the format brought one along
+    layOutTestimonyRow_(sheet, newRow, width);
   } else if (!copyDropdownFromSimilarRow_(sheet, newRow, kind)) {
     refreshDropdowns_(sheet);
   }
@@ -394,16 +399,39 @@ function insertProgramRow_(kind) {
 
 
 /**
+ * Lays out a new testimonies row the way the September 6 fast Sunday
+ * had it: "Ward Members" on its own in column B, and "Sharing of
+ * Testimonies" in columns C-D, merged and formatted like column B. The
+ * bulletin prints column B on the right of the "Testimonies" line and
+ * column C centered below it (see resolveNumTitle_ in
+ * 05_BulletinData.gs). No dropdown: nobody in particular is assigned.
+ */
+function layOutTestimonyRow_(sheet, row, width) {
+  // The B-D merge copied from a speaker or hymn row.
+  sheet.getRange(row, 2, 1, width - 1).getMergedRanges().forEach(function (m) { m.breakApart(); });
+  var who = sheet.getRange(row, 2);
+  who.clearDataValidations(); // in case copying the format brought one along
+  who.copyFormatToRange(sheet, 3, 3, row, row);
+  sheet.getRange(row, 3, 1, 2).merge();
+  who.setValue(TESTIMONY_ROW_WHO_);
+  sheet.getRange(row, 3).setValue(TESTIMONY_ROW_TITLE_);
+}
+
+
+/**
  * The 1-based row of the program item (a speaker, hymn/music, or
  * testimony row) nearest to `selectedIdx`, preferring the selected row
  * itself, then the rows below it, then above. That's the row whose look
- * a new row copies. Null if the program has no items yet — the new row
- * then keeps whatever formatting Sheets gave it.
+ * a new `kind` row copies. A testimonies row only counts for a new
+ * testimonies row: its columns are split differently (see
+ * layOutTestimonyRow_), which a new speaker or song row mustn't copy.
+ * Null if there's no such row — the new row then keeps whatever
+ * formatting Sheets gave it.
  */
-function nearestProgramItemRow_(data, bounds, selectedIdx) {
+function nearestProgramItemRow_(data, bounds, selectedIdx, kind) {
+  var items = kind === 'testimony' ? /speaker|hymn|music|testimon/ : /speaker|hymn|music/;
   var isItem = function (i) {
-    var l = normalizeLabel_(data[i][0]);
-    return /speaker|hymn|music|testimon/.test(l);
+    return items.test(normalizeLabel_(data[i][0]));
   };
   if (isItem(selectedIdx)) return selectedIdx + 1;
   for (var d = 1; d < bounds.end - bounds.start; d++) {
