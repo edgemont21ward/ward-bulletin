@@ -44,10 +44,14 @@ function bulletinTabName_(ss) {
  * creating a tab switches to it (that's createNewBulletin_'s own
  * behavior, kept identical to the menu item's).
  *
+ * It also deletes any leftover hidden copies of the Template tab first
+ * (see removeLeftoverTemplateCopies_).
+ *
  * Returns the newly created Sheet, or null if one already existed.
- * Throws only what createNewBulletin_ throws (e.g. no "Template" tab to
- * copy from yet) — the caller swallows that, since a missing Template
- * tab shouldn't turn into an error dialog every time the file opens.
+ * Throws only what createNewBulletinUnlocked_ throws (e.g. no "Template"
+ * tab to copy from yet), or if another run holds the tab lock for 30
+ * seconds — the caller swallows that, since a missing Template tab
+ * shouldn't turn into an error dialog every time the file opens.
  *
  * Worth knowing: because this runs on every open, deliberately deleting
  * the current week's tab means the next open recreates it. Deleting a
@@ -56,16 +60,77 @@ function bulletinTabName_(ss) {
  */
 function ensureCurrentBulletinTab_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var tabName = bulletinTabName_(ss);
-  if (ss.getSheetByName(tabName)) return null;
+  return withBulletinTabLock_(function () {
+    var removed = removeLeftoverTemplateCopies_(ss);
+    if (removed.length) {
+      ss.toast('Removed ' + removed.length + ' leftover hidden ' +
+        (removed.length === 1 ? 'copy' : 'copies') + ' of the Template tab: ' +
+        removed.join(', ') + '.', 'Ward Bulletin', 8);
+    }
 
-  var sheet = createNewBulletin_();
-  ss.toast('Created "' + tabName + '" from the Template tab.', 'Ward Bulletin', 8);
-  return sheet;
+    var tabName = bulletinTabName_(ss);
+    if (ss.getSheetByName(tabName)) return null;
+
+    var sheet = createNewBulletinUnlocked_();
+    ss.toast('Created "' + tabName + '" from the Template tab.', 'Ward Bulletin', 8);
+    return sheet;
+  });
 }
 
 
-/** Menu action: creates (or switches to) this week's bulletin tab — see createNewBulletin_. */
+/**
+ * Runs `fn` while holding the spreadsheet's document lock, so only one
+ * run at a time, by anyone, can be creating a week's tab.
+ *
+ * Without this, two runs at once — which happens when more than one
+ * editor has an open trigger, since each fires when the file opens —
+ * could both see no tab for the coming Sunday and both copy Template.
+ * One renames its copy; the other's rename fails because that name is
+ * now taken, stranding a hidden "Copy of Template N" (hidden because
+ * Template is). The error was swallowed on open, so the copies piled
+ * up unnoticed. With the lock, the second run waits, then finds the
+ * tab already there.
+ *
+ * Waits up to 30 seconds for the lock, then throws.
+ */
+function withBulletinTabLock_(fn) {
+  var lock = LockService.getDocumentLock();
+  lock.waitLock(30000);
+  try {
+    return fn();
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+
+/**
+ * Deletes every hidden tab named exactly "Copy of Template" or "Copy
+ * of Template <number>", and returns their names. Those are what
+ * copying the (hidden) Template tab produces before the copy is renamed
+ * and unhidden, so a hidden one with that name is a copy whose tab
+ * creation never finished — see withBulletinTabLock_.
+ *
+ * A visible tab is never touched, whatever it's called, and neither is
+ * any other name — so a copy of Template you made yourself, which
+ * Sheets always creates visible, is safe.
+ */
+function removeLeftoverTemplateCopies_(ss) {
+  var prefix = 'Copy of ' + TEMPLATE_SHEET_NAME_;
+  var removed = [];
+  ss.getSheets().forEach(function (sheet) {
+    var name = sheet.getName();
+    var isCopyName = name === prefix || (name.indexOf(prefix + ' ') === 0 && /^\d+$/.test(name.slice(prefix.length + 1)));
+    if (isCopyName && sheet.isSheetHidden()) {
+      ss.deleteSheet(sheet);
+      removed.push(name);
+    }
+  });
+  return removed;
+}
+
+
+/** Menu action: creates (or switches to) this week's bulletin tab — see createNewBulletinUnlocked_. */
 function createNewBulletinFromMenu() {
   var ui = SpreadsheetApp.getUi();
   try {
@@ -74,6 +139,12 @@ function createNewBulletinFromMenu() {
   } catch (err) {
     ui.alert('Could not create a new bulletin', err.message || String(err), ui.ButtonSet.OK);
   }
+}
+
+
+/** createNewBulletinUnlocked_, holding the tab lock — see withBulletinTabLock_. */
+function createNewBulletin_() {
+  return withBulletinTabLock_(createNewBulletinUnlocked_);
 }
 
 
@@ -86,8 +157,11 @@ function createNewBulletinFromMenu() {
  * date already exists (you already created this week's bulletin), just
  * switches to that one instead of making a duplicate. Throws if there's
  * no "Template" tab to copy from.
+ *
+ * Call it through createNewBulletin_ or ensureCurrentBulletinTab_, which
+ * hold the tab lock; on its own, two runs at once can race.
  */
-function createNewBulletin_() {
+function createNewBulletinUnlocked_() {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
   var template = ss.getSheetByName(TEMPLATE_SHEET_NAME_);
   if (!template) {
@@ -108,7 +182,12 @@ function createNewBulletin_() {
   }
 
   var newSheet = template.copyTo(ss);
-  newSheet.setName(tabName);
+  try {
+    newSheet.setName(tabName);
+  } catch (err) {
+    ss.deleteSheet(newSheet); // don't strand a hidden "Copy of Template N"
+    throw err;
+  }
   if (newSheet.isSheetHidden()) newSheet.showSheet(); // Template itself may be hidden — the copy shouldn't be
 
   ss.setActiveSheet(newSheet);

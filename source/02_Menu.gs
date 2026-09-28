@@ -129,7 +129,8 @@ function ensureAutoOpenTrigger_() {
  * authorization, so it can actually show the sidebar automatically.
  *
  * It also makes sure a tab exists for the closest upcoming Sunday,
- * creating one from the Template tab if it doesn't (see
+ * creating one from the Template tab if it doesn't, and deletes any
+ * hidden copies of Template left over from an unfinished creation (see
  * ensureCurrentBulletinTab_ in 07_BulletinTabs.gs) — so opening this on
  * a Sunday with no tab for that day just produces one. Everything after
  * showToolbar() is wrapped in its own try/catch: none of it is allowed
