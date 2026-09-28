@@ -24,15 +24,15 @@
  *
  * previewMemberUpdate and applyMemberUpdate are called from the dialog
  * through google.script.run, which means they're public. Until
- * September 2026 this project was also deployed as a web app anyone
- * could open, running as its owner, and any public function in a web
- * app's deployed version can be called from its page's browser
- * console: a stranger could have passed in a one-line list and read
- * the whole ward back as "removals", or applied it. That deployment is
- * gone, but both functions still require the one-time token that
- * updateMembersFromMenu puts into the dialog it opens (which only an
- * editor clicking the menu ever gets), so a web app added back later
- * can't reopen the hole.
+ * September 2026 this project was also deployed as a page-serving web
+ * app anyone could open, running as its owner, and any public function
+ * in such a deployment can be called from its page's browser console:
+ * a stranger could have passed in a one-line list and read the whole
+ * ward back as "removals", or applied it. That deployment is gone (the
+ * archive service that replaced it serves no pages), but both functions
+ * still require the one-time token that updateMembersFromMenu puts into
+ * the dialog it opens (which only an editor clicking the menu ever
+ * gets), so a page-serving web app added later can't reopen the hole.
  */
 
 // Header cells recognized for each column, compared lowercase. Anything

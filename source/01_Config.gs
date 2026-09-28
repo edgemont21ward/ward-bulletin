@@ -41,11 +41,14 @@
  *    closed it, and the individual menu items below it do the same thing
  *    the matching sidebar button does.
  *
- * There's deliberately no web app deployment. Everything runs from the
- * spreadsheet's own menu and sidebar, and the bulletin is served by
- * GitHub Pages. A public web app would run as its owner and let anyone
- * call this project's public functions — see the note at the top of
- * 09_Members.gs — so don't add one back without a reason to.
+ * The one web app deployment is the ARCHIVE SERVICE, which lets any
+ * editor's "Archive Past Weeks…" create the archive as this
+ * spreadsheet's owner (see ARCHIVING PAST WEEKS in 07_BulletinTabs.gs,
+ * and "Archive service" in source/README.md). It serves no pages and
+ * refuses any request without its secret. Don't deploy anything that
+ * serves pages: a page-serving web app runs as its owner and lets
+ * anyone call this project's public functions (see the note at the top
+ * of 09_Members.gs).
  *
  * HOW IT FINDS DATA
  * Rather than hardcoded cell references (which would break as rows get
@@ -111,8 +114,8 @@
  *   Leadership tabs out of the tab bar without affecting anything this
  *   script reads from them. "Archive Past Weeks…" moves the week tabs
  *   older than this week into a new spreadsheet in the owner's Drive,
- *   after checking each copy. It has to be run from the owning account
- *   — see 07_BulletinTabs.gs.
+ *   after checking each copy. Any editor can run it; the archive
+ *   service creates the file as the owner — see 07_BulletinTabs.gs.
  *
  * PUBLISHING TO GITHUB PAGES (one-time setup)
  * 1. Create a public GitHub repo (e.g. "ward-bulletin"), and in its
@@ -175,3 +178,10 @@ var TEMPLATE_SHEET_NAME_ = 'Template';
 
 
 var UTILITY_SHEET_NAMES_ = [TEMPLATE_SHEET_NAME_, SONGS_SHEET_NAME_, MEMBERS_SHEET_NAME_, LEADERSHIP_SHEET_NAME_];
+
+
+// The archive service's web app URL (see ARCHIVING PAST WEEKS in
+// 07_BulletinTabs.gs). Empty until it's deployed; "Archive Past Weeks…"
+// says so rather than failing. The GitHub workflow reads the deployment
+// ID out of this line to keep that deployment on the latest code.
+var ARCHIVE_SERVICE_URL = '';

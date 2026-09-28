@@ -94,7 +94,10 @@ function ensureCurrentBulletinTab_() {
  * Waits up to 30 seconds for the lock, then throws.
  */
 function withBulletinTabLock_(fn) {
-  var lock = LockService.getDocumentLock();
+  // getDocumentLock() can be null outside the spreadsheet's own UI, e.g.
+  // in the archive service's web app; the project-wide script lock is
+  // then the nearest equivalent.
+  var lock = LockService.getDocumentLock() || LockService.getScriptLock();
   lock.waitLock(30000);
   try {
     return fn();
@@ -451,28 +454,49 @@ function copyDropdownFromSimilarRow_(sheet, newRow, kind) {
  * Sunday bulletinTabName_ names: on a Sunday that's today, so that
  * day's tab stays until Monday.
  *
- * It's careful about the removing: nothing is deleted until every tab
- * has been copied and each copy checked cell for cell against its
- * original.
+ * Who does the work. Any editor can use the menu item, but the archive
+ * has to belong to, and sit in the Drive of, the account that owns this
+ * spreadsheet — and a new spreadsheet always belongs to whoever creates
+ * it. So the menu item doesn't archive anything itself: it sends the
+ * confirmed tab names to the ARCHIVE SERVICE, this project's web app
+ * deployment, which always runs as the account that deployed it (the
+ * owner), whoever calls it. See doPost.
  *
- * The archive has to end up in the Drive of the account that owns this
- * spreadsheet. A new spreadsheet always belongs to, and lands in the
- * Drive of, whoever creates it — no permission changes that — so this
- * only works when run from that account, and it checks: if the new
- * archive's owner isn't this spreadsheet's owner, it stops before
- * copying or removing anything (see archivePastWeeks_). Run from the
- * owner's account, the archive lands at the top of that My Drive, which
- * is also where this spreadsheet is.
+ * The service is deliberately narrow. It serves no pages (there's no
+ * doGet), so nothing can reach this project's other functions through
+ * it; it answers only POSTs carrying the secret kept in Script
+ * Properties, which only people who can edit this spreadsheet's script
+ * can read — the same people who can use the menu anyway; and all it
+ * can do is archive past week tabs.
+ *
+ * Safety. It confirms first, listing every tab. It works in batches of
+ * about 25 seconds (each call to the service is one batch), and within
+ * a batch every tab is copied and each copy checked cell for cell
+ * against its original before any of them is removed; a mismatch stops
+ * the run with nothing in that batch removed. Only tabs that were
+ * confirmed AND are still past weeks are touched, so if the date rolls
+ * over mid-run, this week's tab isn't swept up.
  * ------------------------------------------------------------------ */
 
 
 var WEEK_TAB_NAME_ = /^(January|February|March|April|May|June|July|August|September|October|November|December) \d{1,2}, \d{4}$/;
 
+var ARCHIVE_SECRET_KEY_ = 'ARCHIVE_SERVICE_SECRET';   // Script Properties: what a call to the service must carry
+var ARCHIVE_IN_PROGRESS_KEY_ = 'ARCHIVE_IN_PROGRESS'; // Script Properties: the archive a multi-batch run is filling
+var ARCHIVE_BATCH_MS_ = 25000;                        // stop starting new tabs after this long, well inside a fetch's timeout
 
-/** Menu action: confirms which tabs will go, archives them, and links to the result. */
+
+/** Menu action: confirms which tabs will go, has the archive service archive them, and links to the result. */
 function archivePastWeeksFromMenu() {
   var ui = SpreadsheetApp.getUi();
   var ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (!ARCHIVE_SERVICE_URL) {
+    ui.alert('Archive isn\'t set up yet',
+      'The archive service hasn\'t been deployed, so there\'s nowhere to send the tabs. See "Archive service" in source/README.md.',
+      ui.ButtonSet.OK);
+    return;
+  }
+
   var thisWeek = bulletinTabName_(ss);
   var names = pastWeekTabs_(ss).map(function (s) { return s.getName(); });
   if (!names.length) {
@@ -492,11 +516,15 @@ function archivePastWeeksFromMenu() {
 
   var result;
   try {
-    result = archivePastWeeks_(names);
+    result = runArchive_(names);
   } catch (err) {
     ui.alert('Archive failed', err.message || String(err), ui.ButtonSet.OK);
     return;
   }
+
+  // Deleting the tab you were looking at leaves Sheets to pick another one; pick this week's instead.
+  var current = ss.getSheetByName(thisWeek);
+  if (current) ss.setActiveSheet(current);
 
   var html = HtmlService.createHtmlOutput(
     '<div style="font-family:Arial,sans-serif;font-size:13px;line-height:1.5">' +
@@ -526,78 +554,188 @@ function pastWeekTabs_(ss) {
 
 
 /**
- * Copies the past week tabs named in `names` into a new spreadsheet,
- * checks each copy against its original, and only then deletes the
- * originals. Only tabs that were confirmed AND are still past weeks
- * are touched, so if the date rolls over while the confirmation is
- * open, this week's tab isn't swept up with them.
- *
- * In the copies, the dropdown rules are removed: they point at the
- * Songs and Members tabs, which the archive doesn't have. Values,
- * formatting, merges and links are kept.
- *
- * If any copy doesn't match its original, nothing is deleted here and
- * the error names the half-made archive, so it can be checked or thrown
- * away.
- *
- * Refuses unless it's being run by this spreadsheet's owner, since the
- * new spreadsheet belongs to (and lands in the Drive of) whoever runs
- * this — see the section note. That's checked straight after creating
- * the archive, the one point where the runner's identity is known
- * without asking for another permission: the new file's owner is the
- * runner. On a mismatch the still-empty spreadsheet is renamed so it's
- * obviously safe to delete, and nothing else happens.
- *
- * Returns { url, name, tabs, owner } for the new spreadsheet.
+ * Has the archive service archive `names`, calling it once per batch
+ * until it reports it's done. Returns { url, name, tabs, owner }, where
+ * tabs lists every tab archived across all the batches. Throws the
+ * service's own message if a batch fails; any earlier batches' tabs
+ * stay archived.
  */
-function archivePastWeeks_(names) {
-  return withBulletinTabLock_(function () {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var tabs = pastWeekTabs_(ss).filter(function (s) { return names.indexOf(s.getName()) !== -1; });
-    if (!tabs.length) throw new Error('None of those tabs are here to archive any more.');
+function runArchive_(names) {
+  var archiveId = null;
+  var archived = [];
+  for (var batch = 0; batch < 50; batch++) {
+    var r = callArchiveService_({ names: names, archiveId: archiveId });
+    archiveId = r.archiveId;
+    archived = archived.concat(r.archived);
+    if (r.done) return { url: r.url, name: r.name, tabs: archived, owner: r.owner };
+  }
+  throw new Error('The archive still wasn\'t finished after 50 batches. What was archived so far is in ' +
+    (archiveId ? 'https://docs.google.com/spreadsheets/d/' + archiveId : 'the archive') + '.');
+}
 
-    var byDate = tabs.map(function (s) { return s.getName(); }).sort(function (a, b) {
-      return parseBulletinDateText_(a) < parseBulletinDateText_(b) ? -1 : 1;
-    });
-    var title = ss.getName() + ' — Archive (' + byDate[0] +
-      (byDate.length > 1 ? ' to ' + byDate[byDate.length - 1] : '') + ')';
 
-    var archive = SpreadsheetApp.create(title);
-    var owner = ownerEmail_(ss);
-    var runner = ownerEmail_(archive); // a new spreadsheet is owned by whoever created it
-    if (!owner || owner !== runner) {
-      archive.rename('Unused archive — safe to delete');
-      throw new Error('Archive Past Weeks has to be run from ' + (owner || 'the account that owns this spreadsheet') +
-        ', which owns this spreadsheet, so the archive goes into that account\'s Google Drive. Nothing was ' +
-        'archived or removed. It did leave an empty spreadsheet called "Unused archive — safe to delete" in ' +
-        (runner ? 'the Drive of ' + runner : 'your Google Drive') + '; you can delete it.');
+/** One call to the archive service (see doPost); returns its result, or throws its error. */
+function callArchiveService_(request) {
+  request.secret = archiveServiceSecret_();
+  var resp = UrlFetchApp.fetch(ARCHIVE_SERVICE_URL, {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify(request),
+    muteHttpExceptions: true
+  });
+  var body;
+  try {
+    body = JSON.parse(resp.getContentText());
+  } catch (err) {
+    throw new Error('The archive service didn\'t answer properly (HTTP ' + resp.getResponseCode() +
+      '), so nothing more was archived. See "Archive service" in source/README.md.');
+  }
+  if (!body.ok) throw new Error(body.error);
+  return body.value;
+}
+
+
+/**
+ * The secret a call to the archive service must carry, from Script
+ * Properties — made on first use. Script Properties are shared by
+ * everyone who runs this project, and readable only by people who can
+ * open its script, i.e. this spreadsheet's editors.
+ */
+function archiveServiceSecret_() {
+  var props = PropertiesService.getScriptProperties();
+  var secret = props.getProperty(ARCHIVE_SECRET_KEY_);
+  if (secret) return secret;
+
+  var lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+  try {
+    secret = props.getProperty(ARCHIVE_SECRET_KEY_); // someone else may have made it while we waited
+    if (!secret) {
+      secret = Utilities.getUuid() + Utilities.getUuid();
+      props.setProperty(ARCHIVE_SECRET_KEY_, secret);
     }
-    archive.setSpreadsheetTimeZone(ss.getSpreadsheetTimeZone());
-    var placeholder = archive.getSheets()[0]; // every new spreadsheet starts with a "Sheet1"
+    return secret;
+  } finally {
+    lock.releaseLock();
+  }
+}
 
-    var pairs = tabs.map(function (tab) {
-      var copy = tab.copyTo(archive);
-      copy.setName(tab.getName());
+
+/**
+ * THE ARCHIVE SERVICE — the web app's only entry point, running as the
+ * account that deployed it (this spreadsheet's owner; see the section
+ * note). Takes a JSON body { secret, names, archiveId } and answers
+ * { ok: true, value: <archiveBatch_'s result> } or { ok: false, error }.
+ * Anything without the right secret is refused before any work.
+ */
+function doPost(e) {
+  var out;
+  try {
+    var req = JSON.parse(e && e.postData ? e.postData.contents : '{}');
+    var secret = PropertiesService.getScriptProperties().getProperty(ARCHIVE_SECRET_KEY_);
+    if (!secret || typeof req.secret !== 'string' || req.secret !== secret) throw new Error('Not authorized.');
+    if (!Array.isArray(req.names) || !req.names.length) throw new Error('No tabs were named to archive.');
+    out = { ok: true, value: archiveBatch_(req.names.map(String), req.archiveId ? String(req.archiveId) : null) };
+  } catch (err) {
+    out = { ok: false, error: err.message || String(err) };
+  }
+  return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
+}
+
+
+/**
+ * One batch of an archive run, on the service side. The first batch
+ * (no `archiveId`) creates the archive spreadsheet; later batches fill
+ * the same one, and must name the archive this run started (kept in
+ * Script Properties) so a call can't point the service at some other
+ * spreadsheet.
+ *
+ * Copies as many of the named, still-past week tabs as fit in about 25
+ * seconds, checks every copy against its original, and only then
+ * removes this batch's originals. Returns { archiveId, url, name,
+ * owner, archived: [names], done }.
+ */
+function archiveBatch_(names, archiveId) {
+  return withBulletinTabLock_(function () {
+    var started = Date.now();
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var props = PropertiesService.getScriptProperties();
+    var owner = ownerEmail_(ss);
+    var tabs = pastWeekTabs_(ss).filter(function (s) { return names.indexOf(s.getName()) !== -1; });
+
+    var archive;
+    if (archiveId) {
+      if (archiveId !== props.getProperty(ARCHIVE_IN_PROGRESS_KEY_)) {
+        throw new Error('That isn\'t the archive this run started, so nothing more was archived.');
+      }
+      archive = SpreadsheetApp.openById(archiveId);
+    } else {
+      if (!tabs.length) throw new Error('None of those tabs are here to archive any more.');
+      archive = createArchiveSpreadsheet_(ss, names, owner);
+      props.setProperty(ARCHIVE_IN_PROGRESS_KEY_, archive.getId());
+    }
+
+    var pairs = [];
+    for (var i = 0; i < tabs.length; i++) {
+      if (pairs.length && Date.now() - started > ARCHIVE_BATCH_MS_) break; // always at least one per batch
+      var copy = tabs[i].copyTo(archive);
+      copy.setName(tabs[i].getName());
       if (copy.isSheetHidden()) copy.showSheet();
+      // The dropdown rules point at Songs/Members, which the archive doesn't have.
       copy.getRange(1, 1, copy.getMaxRows(), copy.getMaxColumns()).clearDataValidations();
-      return { tab: tab, copy: copy };
+      pairs.push({ tab: tabs[i], copy: copy });
+    }
+
+    // A new spreadsheet starts with one blank sheet (its name depends on the locale); drop anything that isn't an archived tab.
+    archive.getSheets().forEach(function (sheet) {
+      if (names.indexOf(sheet.getName()) === -1 && archive.getSheets().length > 1) archive.deleteSheet(sheet);
     });
-    archive.deleteSheet(placeholder);
 
     var mismatched = pairs.filter(function (p) { return !sameSheetValues_(p.tab, p.copy); });
     if (mismatched.length) {
       throw new Error('The archive copy of ' + mismatched.map(function (p) { return p.tab.getName(); }).join(', ') +
-        ' didn\'t match the original, so no tabs were removed from this spreadsheet. The copies made so far ' +
-        'are in "' + archive.getName() + '" in your Google Drive: ' + archive.getUrl());
+        ' didn\'t match the original, so this batch removed nothing from this spreadsheet. The archive so far is "' +
+        archive.getName() + '": ' + archive.getUrl());
     }
-
-    // Deleting the tab you're looking at leaves Sheets to pick another one; pick this week's instead.
-    var current = ss.getSheetByName(bulletinTabName_(ss));
-    if (current) ss.setActiveSheet(current);
     pairs.forEach(function (p) { ss.deleteSheet(p.tab); });
 
-    return { url: archive.getUrl(), name: archive.getName(), tabs: tabs.map(function (s) { return s.getName(); }), owner: owner };
+    var done = pairs.length === tabs.length;
+    if (done) props.deleteProperty(ARCHIVE_IN_PROGRESS_KEY_);
+    return {
+      archiveId: archive.getId(), url: archive.getUrl(), name: archive.getName(), owner: owner,
+      archived: pairs.map(function (p) { return p.tab.getName(); }), done: done
+    };
   });
+}
+
+
+/**
+ * Creates the archive spreadsheet, named for the date range of `names`
+ * and set to this spreadsheet's time zone — after checking it belongs
+ * to this spreadsheet's owner. The service runs as whoever deployed it,
+ * so a new file belonging to anyone else means it was deployed from
+ * the wrong account: the still-empty file is renamed so it's obviously
+ * safe to delete, and nothing is archived.
+ */
+function createArchiveSpreadsheet_(ss, names, owner) {
+  var byDate = names.slice().sort(function (a, b) {
+    return parseBulletinDateText_(a) < parseBulletinDateText_(b) ? -1 : 1;
+  });
+  var title = ss.getName() + ' — Archive (' + byDate[0] +
+    (byDate.length > 1 ? ' to ' + byDate[byDate.length - 1] : '') + ')';
+
+  var archive = SpreadsheetApp.create(title);
+  var runner = ownerEmail_(archive); // a new spreadsheet belongs to whoever created it
+  if (!owner || owner !== runner) {
+    archive.rename('Unused archive — safe to delete');
+    throw new Error('The archive service is running as ' + (runner || 'an unknown account') + ', not ' +
+      (owner || 'the account that owns this spreadsheet') + ', so its archive wouldn\'t belong to the owner. ' +
+      'Nothing was archived. It has to be deployed from the owner\'s account — see "Archive service" in ' +
+      'source/README.md. (It left an empty spreadsheet called "Unused archive — safe to delete" in the Drive of ' +
+      (runner || 'that account') + '.)');
+  }
+  archive.setSpreadsheetTimeZone(ss.getSpreadsheetTimeZone());
+  return archive;
 }
 
 

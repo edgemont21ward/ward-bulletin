@@ -61,3 +61,17 @@ jobs:
       # is currently in the Apps Script editor with what's in source/.
       - name: Push to Apps Script
         run: clasp push --force
+
+      # The archive service is a web app deployment, and a deployment runs a
+      # frozen version of the code, so point it at a new version of what was
+      # just pushed. Skipped until ARCHIVE_SERVICE_URL in 01_Config.gs is set.
+      # Each run uses up one of the project's versions (Google caps a project
+      # at around 200); see "Archive service" in source/README.md.
+      - name: Refresh the archive service
+        run: |
+          id=$(grep -oE "script\.google\.com/macros/s/[A-Za-z0-9_-]+/exec" source/01_Config.gs | head -1 | cut -d/ -f4)
+          if [ -z "$id" ]; then
+            echo "ARCHIVE_SERVICE_URL isn't set in source/01_Config.gs yet; nothing to refresh."
+            exit 0
+          fi
+          clasp update-deployment "$id" --description "Archive service, ${GITHUB_SHA::7}"

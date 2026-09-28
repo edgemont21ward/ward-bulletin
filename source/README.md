@@ -49,8 +49,32 @@ A push doesn't touch Script Properties. The GitHub token that
 `03_Publish.gs` publishes with lives there, set by hand, and survives
 every push.
 
-There's no web app deployment, on purpose: see the note under SETUP in
-`01_Config.gs`.
+## Archive service
+
+"Archive Past Weeks…" can be run by any editor, but the archive it makes
+has to belong to the account that owns the spreadsheet, and Google always
+makes whoever creates a file its owner. So the archiving is done by a web
+app deployment of this project that runs as the account that deployed it:
+the owner. The menu item sends it the tab names; it does the work.
+
+It's locked down: it serves no pages (there's no `doGet`), and it refuses
+any request that doesn't carry the secret kept in the script's Script
+Properties (`ARCHIVE_SERVICE_SECRET`, made on first use), which only the
+spreadsheet's editors can read.
+
+- **It must be deployed from the owner's account.** If it runs as anyone
+  else, it refuses to archive, because the archive wouldn't belong to the
+  owner. The deployment settings (run as the deployer, reachable without
+  signing in) come from the `webapp` block in `appsscript.json`.
+- **Its URL is `ARCHIVE_SERVICE_URL` in `01_Config.gs`.** The Push to Apps
+  Script workflow reads the deployment ID from that line and points the
+  deployment at a new version after every push, since a deployment runs a
+  frozen copy of the code.
+- **Each of those refreshes uses up a version.** Google caps a project at
+  around 200. If that's ever reached, delete old versions in the Apps
+  Script editor (Project history).
+- **To rotate the secret,** delete `ARCHIVE_SERVICE_SECRET` in Project
+  Settings > Script Properties; the next archive run makes a new one.
 
 ### Editing in the browser
 
