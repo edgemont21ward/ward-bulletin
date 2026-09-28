@@ -69,6 +69,10 @@ function buildMenu_() {
   }
 
   var ui = SpreadsheetApp.getUi();
+  var reportsMenu = ui.createMenu('📊 Reports')
+    .addItem('Speakers', 'showSpeakersReport')
+    .addItem('Prayers', 'showPrayersReport');
+
   var addRowMenu = ui.createMenu('➕ Add Program Row')
     .addItem('Speaker', 'addSpeakerRowFromMenu')
     .addItem('Intermediate Hymn', 'addHymnRowFromMenu')
@@ -87,6 +91,8 @@ function buildMenu_() {
     .addItem('🔄 Refresh Dropdowns', 'refreshDropdownsFromMenu')
     .addItem('🎵 Update Songs', 'updateSongsFromMenu')
     .addItem('👥 Update Ward Members', 'updateMembersFromMenu')
+    .addSeparator()
+    .addSubMenu(reportsMenu)
     .addSeparator();
 
   if (hidden) {

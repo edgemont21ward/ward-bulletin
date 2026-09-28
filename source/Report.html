@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<meta charset="UTF-8">
+<!--
+  The Speakers / Prayers report (see showReport_ in 10_Reports.gs). All
+  its data is built into the page when it opens, so it never calls back
+  to the server: the filters, search and view switch all run here.
+  Names are always put on the page with textContent, never innerHTML.
+-->
+<style>
+  body { font-family: Arial, sans-serif; font-size: 13px; color: #1a1a1a; margin: 0; padding: 2px 4px; }
+  .bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
+  .views { display: inline-flex; border: 1px solid #c9cfee; border-radius: 6px; overflow: hidden; }
+  .views button {
+    border: none; background: #fff; color: #364fc7; padding: 7px 12px; font: inherit;
+    font-weight: 600; cursor: pointer;
+  }
+  .views button.on { background: #364fc7; color: #fff; }
+  select, input[type=search] {
+    font: inherit; padding: 6px 8px; border: 1px solid #c4c7c5; border-radius: 6px; background: #fff;
+  }
+  input[type=search] { flex: 1; min-width: 140px; }
+  .muted { color: #5f6368; }
+  .count { margin: 0 0 6px; }
+  .table-wrap { max-height: 400px; overflow-y: auto; border: 1px solid #e3e5e8; border-radius: 6px; }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    position: sticky; top: 0; background: #f4f5fb; text-align: left; font-weight: 600;
+    padding: 7px 10px; border-bottom: 1px solid #e3e5e8;
+  }
+  td { padding: 6px 10px; border-bottom: 1px solid #f0f1f3; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  .num { text-align: right; white-space: nowrap; }
+  .never { color: #5f6368; }
+  .part { color: #5f6368; font-size: 12px; }
+  .week { padding: 8px 10px; border-bottom: 1px solid #f0f1f3; }
+  .week:last-child { border-bottom: none; }
+  .week .date { font-weight: 600; margin-bottom: 3px; }
+  .week .line { margin-left: 12px; }
+  .others { margin-top: 10px; line-height: 1.5; }
+  .empty { padding: 24px; text-align: center; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+
+<div class="bar">
+  <div class="views">
+    <button id="view-due" class="on" onclick="setView('due')">Who's due</button>
+    <button id="view-weeks" onclick="setView('weeks')">Week by week</button>
+  </div>
+  <span id="filters">
+    <select id="age" onchange="render()" aria-label="Ages">
+      <option value="0">All ages</option>
+      <option value="8">Ages 8+</option>
+      <option value="12" selected>Ages 12+</option>
+      <option value="18">Ages 18+</option>
+    </select>
+    <select id="gender" onchange="render()" aria-label="Gender">
+      <option value="">Men and women</option>
+      <option value="M">Men</option>
+      <option value="F">Women</option>
+    </select>
+  </span>
+  <input type="search" id="search" placeholder="Search names…" oninput="render()" aria-label="Search names">
+</div>
+
+<section id="due">
+  <p class="count muted" id="count"></p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Name</th><th class="num">Age</th><th id="last-head"></th><th class="num">Weeks ago</th><th class="num">Times</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+  <p class="muted" id="legend"></p>
+  <div class="others muted" id="others"></div>
+</section>
+
+<section id="weeks" hidden>
+  <div class="table-wrap" id="week-list"></div>
+</section>
+
+<script>
+  var R = <?!= reportJson ?>;
+  var SPEAKER = R.kind === 'speaker';
+  var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  var view = 'due';
+
+  function el(id) { return document.getElementById(id); }
+  function make(tag, text, cls) {
+    var e = document.createElement(tag);
+    if (text !== undefined && text !== null) e.textContent = text;
+    if (cls) e.className = cls;
+    return e;
+  }
+  /** "2026-09-20" -> "Sep 20, 2026", read as plain text so no time zone can move it. */
+  function fmt(iso) {
+    if (!iso) return '';
+    var p = iso.split('-');
+    return MONTHS[Number(p[1]) - 1] + ' ' + Number(p[2]) + ', ' + p[0];
+  }
+  function weeksText(n) { return n === null ? '' : n === 0 ? 'this week' : String(n); }
+  /** "Closing Prayer" -> "closing"; speaker parts other than plain "Speaker" (e.g. "Youth Speaker") are shown as they are. */
+  function partNote(part) {
+    if (!part) return '';
+    if (!SPEAKER) return part.replace(/ prayer$/i, '').toLowerCase();
+    return /^speaker$/i.test(part) ? '' : part;
+  }
+
+  function setView(v) {
+    view = v;
+    el('view-due').className = v === 'due' ? 'on' : '';
+    el('view-weeks').className = v === 'weeks' ? 'on' : '';
+    el('due').hidden = v !== 'due';
+    el('weeks').hidden = v !== 'weeks';
+    el('filters').hidden = v !== 'due';
+    render();
+  }
+
+  function render() {
+    var q = el('search').value.trim().toLowerCase();
+    if (view === 'due') renderDue(q); else renderWeeks(q);
+  }
+
+  function renderDue(q) {
+    var minAge = Number(el('age').value);
+    var gender = el('gender').value;
+    var shown = R.people.filter(function (p) {
+      if (minAge && (p.age === null || p.age < minAge)) return false;
+      if (gender && p.gender !== gender) return false;
+      return !q || p.name.toLowerCase().indexOf(q) !== -1 || p.sortName.toLowerCase().indexOf(q) !== -1;
+    });
+
+    var body = el('rows');
+    body.textContent = '';
+    shown.forEach(function (p) {
+      var tr = document.createElement('tr');
+      if (!p.last) tr.className = 'never';
+      tr.appendChild(make('td', p.name));
+      tr.appendChild(make('td', p.age === null ? '' : String(p.age), 'num'));
+      var last = make('td', p.last ? fmt(p.last) : '—');
+      var note = partNote(p.lastPart);
+      if (note) { last.appendChild(document.createTextNode(' ')); last.appendChild(make('span', '· ' + note, 'part')); }
+      tr.appendChild(last);
+      tr.appendChild(make('td', weeksText(p.weeksAgo), 'num'));
+      tr.appendChild(make('td', String(p.times), 'num'));
+      body.appendChild(tr);
+    });
+    if (!shown.length) {
+      var tr = document.createElement('tr');
+      var td = make('td', 'No one matches those filters.', 'empty muted');
+      td.colSpan = 5;
+      tr.appendChild(td);
+      body.appendChild(tr);
+    }
+
+    var never = shown.filter(function (p) { return !p.last; }).length;
+    el('count').textContent = 'Showing ' + shown.length + ' of ' + R.people.length + ' members · ' +
+      never + (SPEAKER ? ' haven\'t spoken' : ' haven\'t prayed') +
+      (R.historyStart ? ' since ' + fmt(R.historyStart) : ' yet');
+    el('last-head').textContent = SPEAKER ? 'Last spoke' : 'Last prayed';
+    el('legend').textContent = R.historyStart
+      ? '— means not since ' + fmt(R.historyStart) + ', when the history starts. "Weeks ago" counts back from ' + fmt(R.thisWeek) + '.'
+      : 'No history yet: it fills in each time a bulletin is published.';
+
+    var others = el('others');
+    others.textContent = '';
+    var extra = R.notOnMembers.filter(function (p) { return !q || p.name.toLowerCase().indexOf(q) !== -1; });
+    if (extra.length) {
+      others.appendChild(make('div', 'Also in the history, but not on the Members tab:'));
+      extra.forEach(function (p) {
+        var note = partNote(p.lastPart);
+        others.appendChild(make('div', p.name + ' — ' + fmt(p.last) + (note ? ' (' + note + ')' : '') +
+          (p.times > 1 ? ', ' + p.times + ' times' : '')));
+      });
+    }
+  }
+
+  function renderWeeks(q) {
+    var list = el('week-list');
+    list.textContent = '';
+    var weeks = R.weeks.filter(function (w) {
+      return !q || w.parts.some(function (p) { return p.name.toLowerCase().indexOf(q) !== -1; });
+    });
+    weeks.forEach(function (w) {
+      var box = make('div', null, 'week');
+      box.appendChild(make('div', fmt(w.sunday), 'date'));
+      w.parts.forEach(function (p) { box.appendChild(make('div', p.part + ': ' + p.name, 'line')); });
+      list.appendChild(box);
+    });
+    if (!weeks.length) {
+      list.appendChild(make('div', R.weeks.length ? 'No Sunday has that name.' :
+        'No history yet: it fills in each time a bulletin is published.', 'empty muted'));
+    }
+  }
+
+  render();
+</script>
+</body>
+</html>

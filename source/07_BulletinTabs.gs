@@ -11,8 +11,8 @@
  * the script only knows the field labels it reads, not the rest of your
  * program's layout.
  *
- * "Show/Hide Reference Tabs" tucks the Template/Songs/Members/Leadership
- * tabs out of the tab bar, or brings them back. That's Sheets' own
+ * "Show/Hide Reference Tabs" tucks the Template/Songs/Members/Leadership/
+ * History tabs out of the tab bar, or brings them back. That's Sheets' own
  * hideSheet()/showSheet(), the same as right-click > Hide sheet, so
  * nothing is deleted and the script reads hidden tabs normally.
  */
@@ -211,7 +211,7 @@ function createNewBulletinUnlocked_() {
 
 
 /**
- * Shows or hides the Template/Songs/Members/Leadership tabs together,
+ * Shows or hides the Template/Songs/Members/Leadership/History tabs together,
  * for the two menu actions below. A tab that doesn't exist yet (e.g.
  * you haven't added Leadership) is silently skipped, not an error.
  * Returns the names it actually found and changed.
@@ -235,7 +235,7 @@ function setUtilityTabsVisible_(visible) {
 
 
 /**
- * True only when every Template/Songs/Members/Leadership tab that
+ * True only when every Template/Songs/Members/Leadership/History tab that
  * exists is currently hidden — used by buildMenu_() to decide which of
  * "Show"/"Hide Reference Tabs" to offer. False (i.e. offer "Hide") when
  * any of them is visible, OR when none of them exist yet — either way
@@ -261,7 +261,7 @@ function hideUtilityTabsFromMenu() {
   buildMenu_(); // so the menu now offers "Show" instead of "Hide"
   SpreadsheetApp.getUi().alert(changed.length
     ? ('Hid: ' + changed.join(', ') + '.')
-    : 'None of the Template/Songs/Members/Leadership tabs were found.');
+    : 'None of the reference tabs (Template, Songs, Members, Leadership, History) were found.');
 }
 
 
@@ -271,7 +271,7 @@ function showUtilityTabsFromMenu() {
   buildMenu_(); // so the menu now offers "Hide" instead of "Show"
   SpreadsheetApp.getUi().alert(changed.length
     ? ('Shown: ' + changed.join(', ') + '.')
-    : 'None of the Template/Songs/Members/Leadership tabs were found.');
+    : 'None of the reference tabs (Template, Songs, Members, Leadership, History) were found.');
 }
 
 

@@ -1,7 +1,8 @@
 /**
  * CONFIGURATION
  * Ward name, GitHub Pages destination, and the sheet/tab names every
- * other file looks up by name (Songs, Members, Leadership, Template).
+ * other file looks up by name (Songs, Members, Leadership, Template,
+ * History).
  *
  * This file loads first, and that matters. Apps Script joins every file
  * into one script, running each file's top-level `var` statements in
@@ -26,8 +27,8 @@
  *    repo's .clasp.json. Delete the default empty Code.gs.
  * 3. Push the code in from the repo, rather than pasting it file by
  *    file — commit to main and the "Push to Apps Script" workflow runs
- *    clasp push, which creates all thirteen files (01_Config through
- *    09_Members, Template, Sidebar, MembersDialog, and the
+ *    clasp push, which creates all fifteen files (01_Config through
+ *    10_Reports, Template, Sidebar, MembersDialog, Report, and the
  *    appsscript.json manifest) in one go. Setup for that, including
  *    the credentials it needs, is in source/README.md under "Automatic
  *    deploys". The numeric prefixes keep the script files in a sensible
@@ -116,6 +117,9 @@
  *   older than this week into a new spreadsheet in the owner's Drive,
  *   after checking each copy. Any editor can run it; the archive
  *   service creates the file as the owner — see 07_BulletinTabs.gs.
+ * - Every publish records who spoke and prayed that Sunday on a hidden
+ *   "History" tab, and "Ward Bulletin > Reports" shows who's due to be
+ *   asked, or a week-by-week log — see 10_Reports.gs.
  *
  * PUBLISHING TO GITHUB PAGES (one-time setup)
  * 1. Create a public GitHub repo (e.g. "ward-bulletin"), and in its
@@ -177,7 +181,10 @@ var LEADERSHIP_SHEET_NAME_ = 'Leadership';
 var TEMPLATE_SHEET_NAME_ = 'Template';
 
 
-var UTILITY_SHEET_NAMES_ = [TEMPLATE_SHEET_NAME_, SONGS_SHEET_NAME_, MEMBERS_SHEET_NAME_, LEADERSHIP_SHEET_NAME_];
+var HISTORY_SHEET_NAME_ = 'History'; // who spoke and prayed each published Sunday — see 10_Reports.gs
+
+
+var UTILITY_SHEET_NAMES_ = [TEMPLATE_SHEET_NAME_, SONGS_SHEET_NAME_, MEMBERS_SHEET_NAME_, LEADERSHIP_SHEET_NAME_, HISTORY_SHEET_NAME_];
 
 
 // The archive service's web app URL (see ARCHIVING PAST WEEKS in

@@ -12,6 +12,7 @@
     "source/06_Dropdowns.gs",
     "source/07_BulletinTabs.gs",
     "source/08_Songs.gs",
-    "source/09_Members.gs"
+    "source/09_Members.gs",
+    "source/10_Reports.gs"
   ]
 }

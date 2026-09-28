@@ -144,6 +144,13 @@ function publishBulletinForSidebar() {
   var html = renderBulletinHtml_(sheet);
   publishToGithub_(html, token);
   var publishedAt = recordPublished_(sheet, html);
+  try {
+    recordHistoryFromHtml_(html, token); // who spoke and prayed, for the reports — see 10_Reports.gs
+  } catch (err) {
+    // The bulletin is already published; a History hiccup mustn't read as a failed publish.
+    SpreadsheetApp.getActiveSpreadsheet().toast('Published, but the History tab wasn\'t updated: ' +
+      (err.message || String(err)), 'Ward Bulletin', 10);
+  }
 
   var pagesUrl = getPagesUrl_();
   showResultModal_(pagesUrl, 'Bulletin Publish — ' + sheet.getName());
