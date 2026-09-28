@@ -22,7 +22,7 @@ bulletin was for.
 | `09_Members.gs` | "Update Ward Members": syncs the Members tab to LCR's Member List (its PDF export, or the list pasted in), after a review of every change. |
 | `10_Reports.gs` | The History tab each publish writes (who spoke and prayed), and the Reports > Speakers / Prayers dialogs that read it. |
 | `Template.html` | The bulletin itself — layout and styling. |
-| `Sidebar.html` | The Publish/Preview sidebar. |
+| `Sidebar.html` | The sidebar: what's live, Preview/Publish, Add to the program, and Reports. |
 | `Report.html` | The Speakers / Prayers report: "Who's due" and "Week by week". |
 | `MembersDialog.html` | The Update Ward Members dialog: choose the PDF (read in the browser with pdf.js) or paste, review, apply. |
 | `appsscript.json` | The project manifest — timezone, V8 runtime, and error logging. Apps Script hides this by default; see "Editing in the browser" below. |

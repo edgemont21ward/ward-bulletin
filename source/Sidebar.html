@@ -3,263 +3,303 @@
 <head>
 <base target="_top">
 <meta charset="UTF-8">
+<!--
+  The sidebar (see showToolbar in 02_Menu.gs): a status card saying what's
+  live, Preview and Publish, the Add to the program buttons, and the
+  Reports buttons. Each group has its own status line under it, so a
+  message shows up next to the button you pressed. Names are put on the
+  page with textContent, never innerHTML.
+-->
 <style>
   body {
     font-family: Arial, sans-serif;
     font-size: 13px;
     color: #1a1a1a;
-    padding: 4px 2px;
+    margin: 0;
+    padding: 10px 12px 16px;
   }
   button {
-    display: block;
-    width: 100%;
-    padding: 10px 12px;
-    margin-bottom: 10px;
+    font-family: inherit;
     font-size: 13px;
     font-weight: 600;
-    font-family: inherit;
-    border: none;
     border-radius: 6px;
     cursor: pointer;
-    background: #364fc7;
-    color: #fff;
-  }
-  button.secondary {
-    background: #eef0fb;
-    color: #364fc7;
   }
   button:disabled {
     opacity: 0.6;
     cursor: default;
   }
-  .add-rows {
-    margin: 4px 0 14px;
+  button:focus-visible, summary:focus-visible, a:focus-visible {
+    outline: 2px solid #364fc7;
+    outline-offset: 2px;
   }
-  .add-rows .label {
-    color: #666;
-    font-size: 12px;
-    margin-bottom: 6px;
-  }
-  .add-rows .buttons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-  .add-rows button {
-    display: inline-block;
-    width: auto;
-    margin: 0;
-    padding: 6px 10px;
-    font-size: 12px;
-  }
-  button.secondary.highlight {
-    background: #fff3cd;
-    color: #7a5b00;
-    box-shadow: 0 0 0 2px #f0b100;
-    position: relative;
-  }
-  button.secondary.highlight::after {
-    content: "";
-    position: absolute;
-    top: -4px;
-    right: -4px;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: #e8590c;
-    box-shadow: 0 0 0 0 rgba(232, 89, 12, 0.6);
-    animation: pulse 1.6s infinite;
-  }
-  @keyframes pulse {
-    0% { box-shadow: 0 0 0 0 rgba(232, 89, 12, 0.6); }
-    70% { box-shadow: 0 0 0 6px rgba(232, 89, 12, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(232, 89, 12, 0); }
-  }
-  #status {
-    margin-top: 4px;
-    line-height: 1.5;
-    min-height: 1em;
-    transition: opacity 0.4s ease;
-  }
-  #status a {
-    color: #364fc7;
-    word-break: break-all;
-  }
-  #status.error {
-    color: #c0392b;
-  }
-  .muted {
-    color: #666;
-    font-size: 12px;
-    margin-top: 20px;
-    line-height: 1.4;
-  }
-  .published {
-    margin: 2px 0 14px;
-    padding: 8px 10px;
-    background: #f4f5fb;
-    border-radius: 6px;
-    font-size: 12px;
-    line-height: 1.5;
-  }
-  .published a {
+  a {
     color: #364fc7;
     font-weight: 600;
     text-decoration: none;
   }
-  .published a:hover {
+  a:hover {
     text-decoration: underline;
   }
-  .published .meta {
-    color: #666;
+  .pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  /* What's live */
+  .card {
+    background: #f4f5fb;
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+  }
+  .state {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    font-weight: 600;
+    line-height: 1.35;
+  }
+  .dot {
+    flex: none;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: #e8590c;
+  }
+  .dot.live {
+    background: #2b8a3e;
+  }
+  .meta {
+    color: #5f6368;
+    font-size: 12px;
+    line-height: 1.45;
+    margin-top: 3px;
+  }
+  .meta a {
+    white-space: nowrap;
+  }
+
+  /* Preview and Publish */
+  .main {
+    padding: 10px 12px;
+    border: none;
+  }
+  .primary {
+    background: #364fc7;
+    color: #fff;
+  }
+  .secondary {
+    background: #eef0fb;
+    color: #364fc7;
+  }
+  /* The tab you're on isn't what's live: preview it before publishing. */
+  .secondary.attention {
+    background: #fff3cd;
+    color: #7a5b00;
+    box-shadow: 0 0 0 2px #f0b100;
+  }
+
+  /* The add-row and report buttons */
+  h2 {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: #5f6368;
+    margin: 18px 0 4px;
+  }
+  .hint {
+    color: #5f6368;
+    font-size: 12px;
+    line-height: 1.4;
+    margin: 0 0 8px;
+  }
+  .tile {
+    background: #fff;
+    border: 1px solid #d5d9f2;
+    color: #1a1a1a;
+    font-size: 12.5px;
+    line-height: 1.3;
+    text-align: left;
+    padding: 8px 10px;
+  }
+  .tile:hover:not(:disabled) {
+    border-color: #364fc7;
+    background: #f7f8fe;
+  }
+  .tile .plus {
+    color: #364fc7;
+    margin-right: 3px;
+  }
+  .tile small {
+    display: block;
+    color: #5f6368;
+    font-size: 11px;
+    font-weight: 400;
     margin-top: 2px;
   }
-  .published .label {
-    color: #888;
-    font-weight: 600;
+
+  .status {
+    font-size: 12px;
+    line-height: 1.45;
+    color: #2b8a3e;
+    margin-top: 6px;
+    transition: opacity 0.4s ease;
+  }
+  .status:empty {
+    display: none;
+  }
+  .status.working {
+    color: #5f6368;
+  }
+  .status.error {
+    color: #c0392b;
+  }
+
+  .help {
+    color: #5f6368;
+    font-size: 12px;
+    line-height: 1.45;
+    margin-top: 20px;
+  }
+  .help summary {
+    cursor: pointer;
+  }
+  .help p {
+    margin: 8px 0 0;
+  }
+  [hidden] {
+    display: none !important;
   }
 </style>
 </head>
 <body>
 
-  <button id="publishBtn" onclick="doPublish()">Publish</button>
-  <button id="previewBtn" class="secondary" onclick="doPreview()">Preview</button>
-
-  <div class="add-rows">
-    <div class="label">Add to the program, below the selected row:</div>
-    <div class="buttons">
-      <button class="secondary" onclick="addRow('speaker', this)">+ Speaker</button>
-      <button class="secondary" onclick="addRow('hymn', this)">+ Intermediate Hymn</button>
-      <button class="secondary" onclick="addRow('music', this)">+ Musical Number</button>
-      <button class="secondary" onclick="addRow('testimony', this)">+ Testimonies</button>
+  <div class="card">
+    <div class="state"><span class="dot" id="dot"></span><span id="state"></span></div>
+    <div class="meta" id="live-now"></div>
+    <div class="meta" id="published">
+      <span id="published-at"></span> · <a id="view-link" target="_blank">View ↗</a>
     </div>
   </div>
 
-  <div class="published">
-    <div><a id="viewPublishedLink" href="<?= pagesUrl ?>" target="_blank"<? if (!lastPublishedSheet) { ?> style="display:none"<? } ?>>View published bulletin ↗</a></div>
-    <? if (lastPublishedSheet) { ?>
-    <div class="meta" id="lastPublishedTab"><span class="label">Tab:</span> <?= lastPublishedSheet ?></div>
-    <div class="meta" id="lastPublishedTime"><span class="label">Published:</span> <?= lastPublishedAt ?></div>
-    <? } else { ?>
-    <div class="meta" id="lastPublishedTab">Nothing published yet.</div>
-    <div class="meta" id="lastPublishedTime" style="display:none"></div>
-    <? } ?>
+  <div class="pair">
+    <button id="preview-btn" class="main secondary" onclick="doPreview(this)">Preview</button>
+    <button id="publish-btn" class="main primary" onclick="doPublish(this)">Publish</button>
   </div>
+  <div class="status" id="publish-status"></div>
 
-  <div id="status"></div>
+  <h2>Add to the program</h2>
+  <p class="hint">Goes just below the row you've selected.</p>
+  <div class="pair">
+    <button class="tile" onclick="addRow('speaker', this)"><span class="plus">+</span>Speaker</button>
+    <button class="tile" onclick="addRow('hymn', this)"><span class="plus">+</span>Intermediate Hymn</button>
+    <button class="tile" onclick="addRow('music', this)"><span class="plus">+</span>Musical Number</button>
+    <button class="tile" onclick="addRow('testimony', this)"><span class="plus">+</span>Testimonies</button>
+  </div>
+  <div class="status" id="rows-status"></div>
 
-  <p class="muted">
-    <b>Publish</b> makes whichever sheet tab is active the live bulletin
-    everyone sees, and shows it right here when it's done.<br><br>
-    <b>Preview</b> shows you what it looks like first, before you
-    publish — it lights up whenever the active tab isn't a match for
-    what's actually live: a different tab, or this same one edited
-    since it was published.
-  </p>
+  <h2>Reports</h2>
+  <div class="pair">
+    <button class="tile" onclick="openReport('speaker', this)">Speakers<small>Who's due to speak</small></button>
+    <button class="tile" onclick="openReport('prayer', this)">Prayers<small>Who's due to pray</small></button>
+  </div>
+  <div class="status" id="reports-status"></div>
+
+  <details class="help">
+    <summary>How Preview and Publish work</summary>
+    <p><b>Preview</b> shows how the tab you're on will look, without
+      publishing anything. It turns yellow when that tab isn't what's
+      live: a different tab, or this one edited since it was published.</p>
+    <p><b>Publish</b> makes the tab you're on the live bulletin everyone
+      sees, and shows it to you when it's done.</p>
+  </details>
 
 <script>
-// Filled in at render time (see showToolbar()'s hasChanges), so the
-// Preview button already reflects reality the instant the sidebar opens
-// — refreshPublishStatus() below then keeps it current afterward, since
-// the sheet can keep being edited (or published from elsewhere) while
-// the sidebar stays open.
-if (<?!= JSON.stringify(hasChanges) ?>) {
-  document.getElementById('previewBtn').classList.add('highlight');
-}
+function el(id) { return document.getElementById(id); }
 
-var statusClearTimer = null;
-
-function setStatus(html, isError) {
-  if (statusClearTimer) { clearTimeout(statusClearTimer); statusClearTimer = null; }
-  var el = document.getElementById('status');
-  el.style.opacity = '1';
-  el.innerHTML = html;
-  el.className = isError ? 'error' : '';
+/** "October 4, 2026" -> "October 4", for the card's headline; other tab names stay as they are. */
+function shortTabName(name) {
+  return String(name).replace(/,\s*\d{4}$/, '');
 }
 
 /**
- * A brief confirmation that fades out on its own a couple seconds later —
- * used for Preview/Publish's plain success messages, since the modal
- * that just opened (and, for Publish, the persistent panel above) is
- * already the real confirmation; this is just a "yep, that worked."
+ * Fills in the status card and the Preview highlight from a
+ * getPublishStatus() result (see publishState_ in 03_Publish.gs for
+ * what each state means).
  */
-function setTransientStatus(html) {
-  setStatus(html, false);
-  var el = document.getElementById('status');
-  statusClearTimer = setTimeout(function () {
-    el.style.opacity = '0';
-    statusClearTimer = setTimeout(function () {
-      el.innerHTML = '';
-      el.style.opacity = '1';
-      statusClearTimer = null;
-    }, 400); // matches the #status CSS transition duration
-  }, 2000);
+function showPublishStatus(status) {
+  var headline = {
+    none: 'Nothing is published yet',
+    live: shortTabName(status.activeSheet) + ' is live',
+    edited: 'Edited since it was published',
+    newer: shortTabName(status.activeSheet) + ' isn\'t published yet',
+    other: shortTabName(status.activeSheet) + ' isn\'t the live bulletin'
+  }[status.state];
+  el('state').textContent = headline;
+  el('dot').className = status.state === 'live' ? 'dot live' : 'dot';
+
+  var published = status.state !== 'none';
+  el('live-now').hidden = !published || status.state === 'live';
+  el('live-now').textContent = 'Live now: ' + status.sheetName;
+  el('published').hidden = !published;
+  el('published-at').textContent = 'Published ' + status.publishedAt;
+  el('view-link').href = status.pagesUrl;
+
+  el('preview-btn').classList.toggle('attention', status.state !== 'live');
 }
 
+showPublishStatus(<?!= statusJson ?>);
+
 /**
- * Re-checks the server's current publish status and updates the Preview
- * button's highlight and the "last published" panel to match. This is
- * what keeps the sidebar honest no matter which surface actually did
- * the publishing — the sidebar's own Publish button, the "Ward
- * Bulletin" menu, or the Preview modal's in-dialog Publish button all
- * end up calling the same server-side publishBulletinForSidebar(), and
- * none of those other surfaces can reach into this sidebar's JS
- * directly to tell it something changed — so instead this just asks
- * the server "what's the state right now?" on a timer (see setInterval
- * below) and applies whatever it says.
+ * Asks the server again every few seconds, so the card stays right as
+ * you switch tabs or keep editing, and after a publish from the menu or
+ * the Preview dialog, which can't reach into this sidebar to tell it.
  */
 function refreshPublishStatus() {
   google.script.run
-    .withSuccessHandler(function (status) {
-      document.getElementById('previewBtn').classList.toggle('highlight', status.hasChanges);
-      updatePublishedInfo(status);
-    })
+    .withSuccessHandler(showPublishStatus)
     .withFailureHandler(function () { /* ignore — just skip this check */ })
     .getPublishStatus();
 }
-
-// Poll periodically so the sidebar stays current while it's open — from
-// further edits, switching to a different tab than the one that's
-// live, or a publish/preview made from the menu or a dialog instead of
-// this sidebar.
 setInterval(refreshPublishStatus, 4000);
 
-/** Updates the "last published" panel in place — after this sidebar's own publish, and on every periodic refreshPublishStatus() tick. */
-function updatePublishedInfo(status) {
-  var link = document.getElementById('viewPublishedLink');
-  var tabEl = document.getElementById('lastPublishedTab');
-  var timeEl = document.getElementById('lastPublishedTime');
+var STATUS_IDS = ['publish-status', 'rows-status', 'reports-status'];
+var statusTimer = null;
 
-  if (status.sheetName) {
-    link.href = status.pagesUrl;
-    link.style.display = '';
-    tabEl.innerHTML = '<span class="label">Tab:</span> ' + escapeHtmlClient_(status.sheetName);
-    timeEl.style.display = '';
-    timeEl.innerHTML = '<span class="label">Published:</span> ' + escapeHtmlClient_(status.publishedAt);
-  } else {
-    link.style.display = 'none';
-    tabEl.textContent = 'Nothing published yet.';
-    timeEl.style.display = 'none';
+/**
+ * Shows `text` on one status line and clears the others, so only the
+ * latest message is ever on screen. kind is 'working', 'error', or
+ * 'done' (which fades away on its own after a couple of seconds).
+ */
+function setStatus(id, text, kind) {
+  if (statusTimer) { clearTimeout(statusTimer); statusTimer = null; }
+  STATUS_IDS.forEach(function (other) {
+    var line = el(other);
+    line.textContent = other === id ? text : '';
+    line.className = 'status' + (other === id && kind !== 'done' ? ' ' + kind : '');
+    line.style.opacity = '1';
+  });
+  if (kind === 'done') {
+    statusTimer = setTimeout(function () {
+      el(id).style.opacity = '0';
+      statusTimer = setTimeout(function () {
+        el(id).textContent = '';
+        el(id).style.opacity = '1';
+        statusTimer = null;
+      }, 400); // matches the .status CSS transition
+    }, 2000);
   }
-}
-
-/** Minimal client-side escaping for the plain text updatePublishedInfo() interpolates into innerHTML. */
-function escapeHtmlClient_(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
 }
 
 /**
  * Rewrites Google's raw "Authorization is required to perform that
- * action" into something the person can actually act on. A button
- * click here goes through google.script.run, and Apps Script's
- * authorization popup can never appear from a google.script.run call —
- * only a direct "Ward Bulletin" menu click can trigger it — so a newly
- * shared editor who's never used one hits this exact error with no way
- * to fix it from the message alone. Any other error passes through
- * unchanged.
+ * action" into something the person can act on: a button here goes
+ * through google.script.run, which can never show the authorization
+ * popup — only a "Ward Bulletin" menu click can — so a newly shared
+ * editor would otherwise be stuck. Any other error passes through.
  */
 function friendlyError_(err) {
   var msg = (err && err.message) || String(err);
@@ -271,57 +311,55 @@ function friendlyError_(err) {
   return msg;
 }
 
-function doPublish() {
-  var btn = document.getElementById('publishBtn');
+/**
+ * Runs server function `fn` (with `arg`, if given) for a button:
+ * disables it while it runs and shows `working` on status line
+ * `statusId`, then onDone's message (or the error) there. onDone gets
+ * the server's result.
+ */
+function run(btn, statusId, working, fn, arg, onDone) {
   btn.disabled = true;
-  setStatus('Publishing…');
-
-  google.script.run
+  setStatus(statusId, working, 'working');
+  var runner = google.script.run
     .withSuccessHandler(function (result) {
       btn.disabled = false;
-      document.getElementById('previewBtn').classList.remove('highlight');
-      updatePublishedInfo(result);
-      setTransientStatus('✓ Published.');
+      setStatus(statusId, onDone(result), 'done');
     })
     .withFailureHandler(function (err) {
       btn.disabled = false;
-      setStatus(friendlyError_(err), true);
-    })
-    .publishBulletinForSidebar();
+      setStatus(statusId, friendlyError_(err), 'error');
+    });
+  if (arg === undefined) runner[fn](); else runner[fn](arg);
+}
+
+function doPreview(btn) {
+  run(btn, 'publish-status', 'Opening the preview…', 'previewInModal', undefined, function () {
+    return '✓ Preview opened.';
+  });
+}
+
+function doPublish(btn) {
+  run(btn, 'publish-status', 'Publishing…', 'publishBulletinForSidebar', undefined, function (result) {
+    showPublishStatus({ state: 'live', activeSheet: result.sheetName, sheetName: result.sheetName,
+      publishedAt: result.publishedAt, pagesUrl: result.pagesUrl });
+    return '✓ Published.';
+  });
 }
 
 /** Inserts a program row below the selected row — see insertProgramRow_ in 07_BulletinTabs.gs. */
 function addRow(kind, btn) {
-  btn.disabled = true;
-  setStatus('Adding a row…');
-
-  google.script.run
-    .withSuccessHandler(function (added) {
-      btn.disabled = false;
-      setTransientStatus('✓ Added a ' + escapeHtmlClient_(added.label) + ' row at row ' + added.row + '.');
-    })
-    .withFailureHandler(function (err) {
-      btn.disabled = false;
-      setStatus(escapeHtmlClient_(friendlyError_(err)), true);
-    })
-    .addProgramRowForSidebar(kind);
+  run(btn, 'rows-status', 'Adding a row…', 'addProgramRowForSidebar', kind, function (added) {
+    return '✓ Added a ' + added.label + ' row at row ' + added.row + '.';
+  });
 }
 
-function doPreview() {
-  var btn = document.getElementById('previewBtn');
-  btn.disabled = true;
-  setStatus('Opening preview…');
-
-  google.script.run
-    .withSuccessHandler(function () {
-      btn.disabled = false;
-      setTransientStatus('✓ Preview opened.');
-    })
-    .withFailureHandler(function (err) {
-      btn.disabled = false;
-      setStatus(friendlyError_(err), true);
-    })
-    .previewInModal();
+/** Opens the Speakers or Prayers report over the sheet — see showReport_ in 10_Reports.gs. */
+function openReport(kind, btn) {
+  var speakers = kind === 'speaker';
+  run(btn, 'reports-status', 'Opening the ' + (speakers ? 'Speakers' : 'Prayers') + ' report…',
+    speakers ? 'showSpeakersReport' : 'showPrayersReport', undefined, function () {
+      return '✓ Report opened.';
+    });
 }
 </script>
 

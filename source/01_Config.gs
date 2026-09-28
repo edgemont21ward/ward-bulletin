@@ -35,12 +35,13 @@
  *    reading order in the editor's file list; see the note below on why
  *    01_Config.gs specifically has to load before the others.
  * 4. Reload the spreadsheet. A "Ward Bulletin" menu appears, with a
- *    sidebar of Publish/Preview buttons alongside it (use any menu item
- *    once to authorize this project, if prompted — that's also what
- *    lets the sidebar start auto-opening on future opens; see onOpen()
- *    in 02_Menu.gs). "Show Toolbar" reopens the sidebar any time you've
- *    closed it, and the individual menu items below it do the same thing
- *    the matching sidebar button does.
+ *    sidebar alongside it for publishing, adding program rows and
+ *    opening the reports (use any menu item once to authorize this
+ *    project, if prompted — that's also what lets the sidebar start
+ *    auto-opening on future opens; see onOpen() in 02_Menu.gs). "Show
+ *    Toolbar" reopens the sidebar any time you've closed it, and the
+ *    individual menu items below it do the same thing the matching
+ *    sidebar button does.
  *
  * The one web app deployment is the ARCHIVE SERVICE, which lets any
  * editor's "Archive Past Weeks…" create the archive as this
@@ -118,8 +119,9 @@
  *   after checking each copy. Any editor can run it; the archive
  *   service creates the file as the owner — see 07_BulletinTabs.gs.
  * - Every publish records who spoke and prayed that Sunday on a hidden
- *   "History" tab, and "Ward Bulletin > Reports" shows who's due to be
- *   asked, or a week-by-week log — see 10_Reports.gs.
+ *   "History" tab, and "Ward Bulletin > Reports" (or the sidebar's
+ *   Reports buttons) shows who's due to be asked, or a week-by-week
+ *   log — see 10_Reports.gs.
  *
  * PUBLISHING TO GITHUB PAGES (one-time setup)
  * 1. Create a public GitHub repo (e.g. "ward-bulletin"), and in its

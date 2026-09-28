@@ -185,10 +185,7 @@ function showReport_(kind) {
   data.kind = kind;
 
   var tmpl = HtmlService.createTemplateFromFile('Report');
-  // Printed raw into a <script>, so keep "</script>" and the two line separators JavaScript
-  // strings can't hold from ending it early.
-  tmpl.reportJson = JSON.stringify(data)
-    .replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+  tmpl.reportJson = jsonForScript_(data);
   var html = tmpl.evaluate().setWidth(760).setHeight(600);
   SpreadsheetApp.getUi().showModalDialog(html, kind === 'speaker' ? 'Speakers' : 'Prayers');
 }

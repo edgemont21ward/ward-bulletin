@@ -177,18 +177,12 @@ function onOpenInstallable() {
 
 
 /**
- * Menu action (and the installable trigger's target above): opens a
- * sidebar with "Publish" and "Preview" buttons, so those two actions
- * are one click away without opening the menu each time. See
- * Sidebar.html for the button markup/JS. Whether the Preview button
- * should be highlighted, and the last-published tab (if any) with a
- * link to view it (see getPublishStatus and friends in 03_Publish.gs),
- * are baked into the sidebar's JS at render time so it reflects reality
- * the instant it opens, with no server round-trip. Both buttons call a
- * server function via google.script.run that opens the actual result —
- * the preview, or the freshly-published page — in a modal dialog right
- * over the sheet (see showResultModal_ in 04_Preview.gs), so it feels
- * like part of the same window instead of jumping out to a new tab.
+ * Menu action (and the installable trigger's target above): opens the
+ * sidebar (Sidebar.html): the status card, Preview and Publish, the
+ * Add to the program buttons, and the Reports buttons. The publish
+ * status (getPublishStatus in 03_Publish.gs) is built into the page so
+ * the status card is right the moment it opens, with no round trip.
+ * Preview, Publish and the reports open in a dialog over the sheet.
  */
 function showToolbar() {
   try {
@@ -200,13 +194,18 @@ function showToolbar() {
   }
 
   var tmpl = HtmlService.createTemplateFromFile('Sidebar');
-  tmpl.hasChanges = hasUnpublishedChanges();
-
-  var lastPublished = getLastPublishedInfo_();
-  tmpl.pagesUrl = lastPublished.pagesUrl;
-  tmpl.lastPublishedSheet = lastPublished.sheetName;
-  tmpl.lastPublishedAt = lastPublished.publishedAt;
-
+  tmpl.statusJson = jsonForScript_(getPublishStatus());
   var html = tmpl.evaluate().setTitle('Ward Bulletin');
   SpreadsheetApp.getUi().showSidebar(html);
+}
+
+
+/**
+ * `value` as JSON that's safe to print raw into a page's <script> with
+ * <?!= ?>: "</script>" can't end the script early, and the two line
+ * separators JavaScript strings can't hold are escaped too.
+ */
+function jsonForScript_(value) {
+  return JSON.stringify(value)
+    .replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
 }

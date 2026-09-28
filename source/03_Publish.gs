@@ -34,11 +34,11 @@ function getPagesUrl_() {
 
 /**
  * Records which sheet tab was just published: its name (for the
- * sidebar's "Last published" line and for hasUnpublishedChanges()
- * below), its rendered content's hash (so a later edit to that same
- * tab can be detected), a human-readable timestamp of when it went up,
- * and — as LAST_PUBLISHED_DATE_SLUG — a filename-safe "yyyy-MM-dd" of
- * THE SUNDAY THAT BULLETIN IS FOR, which is a different thing entirely
+ * sidebar's status card and for publishState_() below), its rendered
+ * content's hash (so a later edit to that same tab can be detected), a
+ * human-readable timestamp of when it went up, and — as
+ * LAST_PUBLISHED_DATE_SLUG — a filename-safe "yyyy-MM-dd" of THE
+ * SUNDAY THAT BULLETIN IS FOR, which is a different thing entirely
  * from when it was published (a bulletin for the 27th is usually
  * published some evening earlier that week).
  *
@@ -86,42 +86,43 @@ function getLastPublishedInfo_() {
 
 
 /**
- * True if the active sheet tab isn't a match for what's live on
- * GitHub Pages: it's a different tab than the one last published, the
- * same tab has been edited since, or nothing has been published yet.
- * showToolbar calls it when the sidebar opens, and getPublishStatus
- * calls it on every one of the sidebar's periodic checks, so the
- * Preview highlight stays current as you switch tabs or keep editing.
+ * How `sheet` compares with what's live on GitHub Pages, for the
+ * sidebar's status card and its Preview highlight:
+ *   'none'   nothing has been published yet
+ *   'live'   this is the live tab, unchanged since it was published
+ *   'edited' this is the live tab, but it's been edited since
+ *   'newer'  a later Sunday than the live one, not published yet
+ *   'other'  any other tab (an earlier Sunday, Songs, …)
  */
-function hasUnpublishedChanges() {
+function publishState_(sheet) {
   var props = PropertiesService.getDocumentProperties();
   var lastSheet = props.getProperty('LAST_PUBLISHED_SHEET');
-  if (!lastSheet) return true; // nothing published yet
+  if (!lastSheet) return 'none';
 
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  if (sheet.getName() !== lastSheet) return true; // a different tab than what's live
+  if (sheet.getName() !== lastSheet) {
+    // Both are 'yyyy-MM-dd', so they compare as plain strings.
+    var sunday = parseBulletinDateText_(sheet.getName());
+    var liveSunday = parseBulletinDateText_(lastSheet);
+    return sunday && liveSunday && sunday > liveSunday ? 'newer' : 'other';
+  }
 
   var lastHash = props.getProperty('LAST_PUBLISHED_HASH') || '';
-  return hashContent_(renderBulletinHtml_(sheet)) !== lastHash;
+  return hashContent_(renderBulletinHtml_(sheet)) === lastHash ? 'live' : 'edited';
 }
 
 
 /**
- * Sidebar-callable: getLastPublishedInfo_() plus hasUnpublishedChanges()
- * in one round trip — what Sidebar.html's periodic poll calls so the
- * Preview button's highlight and the "last published" panel both stay
- * current no matter which surface actually did the publishing. A
- * publish can come from the sidebar's own button, the "Ward Bulletin"
- * menu, or the Preview modal's in-dialog Publish button — three
- * separate pieces of UI with no way to call back into each other
- * directly (a modal or menu action can't reach into the sidebar's own
- * JS) — so instead the sidebar just asks the server for the current
- * state every few seconds and updates itself to match, regardless of
- * who changed it.
+ * Sidebar-callable: getLastPublishedInfo_() plus the active tab's name
+ * and publishState_(). showToolbar builds it into the sidebar when it
+ * opens, and the sidebar calls it again every few seconds, because a
+ * publish can also come from the menu or the Preview dialog's Publish
+ * button, and neither can reach into the sidebar to tell it.
  */
 function getPublishStatus() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
   var status = getLastPublishedInfo_();
-  status.hasChanges = hasUnpublishedChanges();
+  status.activeSheet = sheet.getName();
+  status.state = publishState_(sheet);
   return status;
 }
 
