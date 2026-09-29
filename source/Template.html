@@ -8,6 +8,7 @@
   /*
     The bulletin's layout. renderBulletinHtml_() (03_Publish.gs) fills
     it in from the spreadsheet through Apps Script's scriptlet tags.
+    Printing has its own layout; see PRINTING at the end.
   */
 
   :root {
@@ -118,6 +119,44 @@
     font-size: 1.15rem;
     font-weight: 600;
   }
+
+  /*
+    PRINTING: two copies of the bulletin side by side on a landscape
+    letter sheet, with a dashed line to cut along. The script at the end
+    of the page builds them (.print-sheet) when it loads, with the text
+    sized so each copy fits its half, and adds "print-ready" to <html>.
+    Only then does printing swap the page for them, so without the
+    script the page prints as it looks. Nothing on screen changes.
+  */
+  .print-sheet { display: none; }
+  @media print {
+    html.print-ready body > *:not(.print-sheet) { display: none !important; }
+    html.print-ready .print-sheet { display: flex; }
+    html.print-ready .print-sheet.too-long { display: block; }
+  }
+  .print-copy {
+    width: 5.5in;
+    height: 8.5in;
+    padding: 0.45in 0.5in;
+    overflow: hidden;
+  }
+  .print-copy + .print-copy { border-left: 1px dashed #aaa; }
+  /* Too long for half a page even in small text: one copy per portrait sheet, running onto more pages. */
+  .print-sheet.too-long .print-copy { width: auto; height: auto; padding: 0; overflow: visible; }
+  .print-ward {
+    text-align: center;
+    font: 700 var(--print-size) Verdana, Arial, sans-serif;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent);
+    padding-bottom: 0.5em;
+    margin-bottom: 0.8em;
+    border-bottom: 1.5px solid var(--accent);
+  }
+  .print-copy .bulletin-body { font-size: var(--print-size); line-height: 1.45; }
+  .print-copy .bulletin-title .align,
+  .print-copy .bulletin-date .align { font-size: calc(var(--print-size) * 1.3); }
+  .print-copy .bulletin-subheading .align { font-size: calc(var(--print-size) * 0.93); }
 </style>
 </head>
 <body>
@@ -278,5 +317,58 @@
 
   <hr class="divider">
 </div>
+<script>
+  // PRINTING — see the note at the end of the styles.
+  (function () {
+    var wardName = document.querySelector('.app-header h1');
+    var bulletin = document.querySelector('.page .bulletin-body');
+    if (!wardName || !bulletin) return;
+
+    function printCopy() {
+      var copy = document.createElement('div');
+      copy.className = 'print-copy';
+      var ward = document.createElement('div');
+      ward.className = 'print-ward';
+      ward.textContent = wardName.textContent;
+      copy.appendChild(ward);
+      copy.appendChild(bulletin.cloneNode(true));
+      return copy;
+    }
+
+    // Lay one copy out off-screen at its printed width, and find the
+    // largest text size, from 13px down to 8px, that fits a half sheet.
+    var HALF_SHEET = 8.5 * 96; // CSS pixels
+    var probe = printCopy();
+    probe.style.cssText = 'position:absolute; left:-10000px; top:0; visibility:hidden; height:auto';
+    document.body.appendChild(probe);
+    function fitsAt(size) {
+      probe.style.setProperty('--print-size', size + 'px');
+      return probe.offsetHeight <= HALF_SHEET;
+    }
+    var size = 13;
+    while (size > 8 && !fitsAt(size)) size -= 0.5;
+    var fits = fitsAt(size);
+    document.body.removeChild(probe);
+
+    var sheet = document.createElement('div');
+    sheet.className = fits ? 'print-sheet' : 'print-sheet too-long';
+    sheet.setAttribute('aria-hidden', 'true');
+    sheet.style.setProperty('--print-size', (fits ? size : 12) + 'px');
+    sheet.appendChild(printCopy());
+    if (fits) sheet.appendChild(printCopy());
+    document.body.appendChild(sheet);
+
+    var page = document.createElement('style');
+    page.textContent = fits ? '@page { size: letter landscape; margin: 0; }'
+                            : '@page { size: letter portrait; margin: 0.5in; }';
+    document.head.appendChild(page);
+    document.documentElement.classList.add('print-ready');
+
+    // The sidebar's Print link opens the page with ?print, straight into the print dialog.
+    if (/[?&]print(=|&|$)/.test(location.search)) {
+      window.addEventListener('load', function () { window.print(); });
+    }
+  })();
+</script>
 </body>
 </html>

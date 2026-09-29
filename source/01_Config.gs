@@ -121,6 +121,9 @@
  *   older than this week into a new spreadsheet in the owner's Drive,
  *   after checking each copy. Any editor can run it; the archive
  *   service creates the file as the owner — see 07_BulletinTabs.gs.
+ * - Printing the published bulletin (Ctrl+P, or Print in the sidebar)
+ *   gives two copies side by side on a landscape letter sheet, to cut
+ *   in half, with the text sized to fit — see PRINTING in Template.html.
  * - Every publish records who spoke and prayed that Sunday on a hidden
  *   "History" tab, and "Ward Bulletin > Reports" (or the sidebar's
  *   Reports buttons) shows who's due to be asked, or a week-by-week

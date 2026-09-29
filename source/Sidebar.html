@@ -5,10 +5,10 @@
 <meta charset="UTF-8">
 <!--
   The sidebar (see showToolbar in 02_Menu.gs): a status card saying what's
-  live, Preview and Publish, the Add to the program buttons, and the
-  Reports buttons. Each group has its own status line under it, so a
-  message shows up next to the button you pressed. Names are put on the
-  page with textContent, never innerHTML.
+  live, with View and Print links to it; Preview and Publish; the Add to
+  the program buttons; and the Reports buttons. Each group has its own
+  status line under it, so a message shows up next to the button you
+  pressed. Names are put on the page with textContent, never innerHTML.
 -->
 <style>
   body {
@@ -77,8 +77,10 @@
     line-height: 1.45;
     margin-top: 3px;
   }
-  .meta a {
-    white-space: nowrap;
+  .links {
+    display: flex;
+    gap: 16px;
+    margin-top: 2px;
   }
 
   /* Preview and Publish */
@@ -181,7 +183,11 @@
     <div class="state"><span class="dot" id="dot"></span><span id="state"></span></div>
     <div class="meta" id="live-now"></div>
     <div class="meta" id="published">
-      <span id="published-at"></span> · <a id="view-link" target="_blank">View ↗</a>
+      <div id="published-at"></div>
+      <div class="links">
+        <a id="view-link" target="_blank">View ↗</a>
+        <a id="print-link" target="_blank" title="Opens the live bulletin, ready to print two to a sheet">Print ↗</a>
+      </div>
     </div>
   </div>
 
@@ -247,6 +253,7 @@ function showPublishStatus(status) {
   el('published').hidden = !published;
   el('published-at').textContent = 'Published ' + status.publishedAt;
   el('view-link').href = status.pagesUrl;
+  el('print-link').href = status.pagesUrl + '?print'; // the page opens its print dialog (see Template.html)
 
   el('preview-btn').classList.toggle('attention', status.state !== 'live');
 }

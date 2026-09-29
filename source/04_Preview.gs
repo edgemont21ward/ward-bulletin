@@ -133,11 +133,11 @@ function renderPreviewHtml() {
  * instead), and (if `linkUrl` is given) a link to it, labelled
  * `linkLabel`, that opens in a new tab. The initial content and every refresh both
  * go through the iframe's `srcdoc` *property* (not an HTML attribute),
- * so there's no HTML-escaping to worry about — JSON.stringify is enough
- * to embed it safely as a JS string literal.
+ * so there's no HTML-escaping to worry about — jsonForScript_ (in
+ * 02_Menu.gs) embeds it safely as a JS string literal.
  */
 function showInlinePreviewModal_(html, title, linkUrl, linkLabel) {
-  var jsHtml = JSON.stringify(html);
+  var jsHtml = jsonForScript_(html); // the bulletin has a <script> of its own, whose </script> mustn't end this one
   var openInNewTab = linkUrl ? openInNewTabLink_(linkUrl, linkLabel) : '';
   var dialogHtml = HtmlService.createHtmlOutput(
     '<!DOCTYPE html><html><head><meta charset="UTF-8">' +

@@ -14,6 +14,14 @@ from a Google Sheet ("Sacrament Meeting 2026") by the Apps Script in
 sheet's own menu. The script commits `index.html` directly through the
 GitHub API using a token stored in its Script Properties.
 
+## Printing
+
+Printing the bulletin page (Ctrl+P, or **Print** in the sheet's sidebar)
+gives two copies side by side on a landscape letter sheet, to cut in
+half. The text is sized so each copy fits its half; a week too long for
+that prints one copy per page instead. Chrome and Edge pick landscape
+automatically; other browsers may need it chosen in the print dialog.
+
 ## Archive naming
 
 An archived file is named for the Sunday its bulletin was written for, not
